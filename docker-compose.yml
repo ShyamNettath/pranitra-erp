@@ -1,0 +1,107 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: pranitra_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pranitra}
+      POSTGRES_USER: ${DB_USER:-pranitra}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - pranitra_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pranitra}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Node.js / Express API ───────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pranitra_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-pranitra}
+      DB_USER: ${DB_USER:-pranitra}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-change_this_jwt_secret_in_production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_this_refresh_secret_in_production}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      SMTP_HOST: ${SMTP_HOST:-smtp.pranitra.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-noreply@pranitra.com}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-PRANITRA PM <noreply@pranitra.com>}
+      TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:-}
+      SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-30}
+      OTP_EXPIRY_MINUTES: ${OTP_EXPIRY_MINUTES:-10}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-3}
+      ZOHO_CLIENT_ID: ${ZOHO_CLIENT_ID:-}
+      ZOHO_CLIENT_SECRET: ${ZOHO_CLIENT_SECRET:-}
+      ZOHO_REFRESH_TOKEN: ${ZOHO_REFRESH_TOKEN:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+    volumes:
+      - uploads:/app/uploads
+    networks:
+      - pranitra_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── React / Vite frontend (served by Nginx in prod) ─────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    container_name: pranitra_frontend
+    restart: unless-stopped
+    networks:
+      - pranitra_net
+
+  # ── Nginx reverse proxy ─────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: pranitra_nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - uploads:/app/uploads:ro
+    networks:
+      - pranitra_net
+
+volumes:
+  db_data:
+  uploads:
+
+networks:
+  pranitra_net:
+    driver: bridge

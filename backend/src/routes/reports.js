@@ -1,0 +1,12 @@
+const router = require('express').Router();
+const { authenticate } = require('../middleware/auth');
+const ctrl = require('../controllers/reportsController');
+router.use(authenticate);
+router.get('/project/:project_id/effort-variance',   ctrl.effortVariance);
+router.get('/project/:project_id/schedule-variance', ctrl.scheduleVariance);
+router.get('/project/:project_id/budget-variance',   ctrl.budgetVariance);
+router.get('/project/:project_id/rework',            ctrl.reworkAnalysis);
+router.get('/project/:project_id/performance',       ctrl.projectPerformance);
+router.get('/associate/:user_id/productivity',       ctrl.associateProductivity);
+router.get('/associate/:user_id/idle-time',          ctrl.idleTime);
+module.exports = router;

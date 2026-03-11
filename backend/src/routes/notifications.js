@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const { authenticate } = require('../middleware/auth');
+const ctrl = require('../controllers/notificationsController');
+router.use(authenticate);
+router.get('/', ctrl.list);
+router.post('/mark-all-read', ctrl.markAllRead);
+router.put('/:id/read', ctrl.markRead);
+router.get('/preferences', ctrl.getPreferences);
+router.put('/preferences', ctrl.updatePreference);
+module.exports = router;

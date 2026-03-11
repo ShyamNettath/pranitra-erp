@@ -1,0 +1,12 @@
+const router = require('express').Router();
+const { authenticate, requireRole } = require('../middleware/auth');
+const ctrl = require('../controllers/timeController');
+router.use(authenticate);
+router.get('/summary', ctrl.summary);
+router.get('/', ctrl.list);
+router.post('/', ctrl.create);
+router.put('/:id', ctrl.update);
+router.delete('/:id', ctrl.softDelete);
+router.post('/:id/approve', requireRole('project_manager','admin'), ctrl.approve);
+router.post('/:id/reject', requireRole('project_manager','admin'), ctrl.reject);
+module.exports = router;

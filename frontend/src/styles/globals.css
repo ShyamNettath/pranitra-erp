@@ -1,0 +1,32 @@
+/* PRANITRA Brand Tokens */
+:root {
+  --navy:        #003264;
+  --navy-light:  #004080;
+  --navy-xlight: #E8EEF6;
+  --red:         #E8232A;
+  --white:       #FFFFFF;
+  --grey-bg:     #F4F6F9;
+  --grey-border: #D8DDE6;
+  --grey-text:   #6B7A90;
+  --green:       #0A7A79;
+  --amber:       #B86A00;
+  --purple:      #5A2D8A;
+  --font:        'Times New Roman', Times, serif;
+  --topbar-h:    60px;
+  --sidebar-w:   220px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--grey-bg);
+  color: var(--navy);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--grey-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--grey-text); }

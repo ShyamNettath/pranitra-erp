@@ -1,0 +1,14 @@
+const router = require('express').Router();
+const { authenticate, requireRole } = require('../middleware/auth');
+const ctrl = require('../controllers/usersController');
+router.use(authenticate);
+router.get('/', ctrl.list);
+router.get('/:id', ctrl.get);
+router.post('/', requireRole('admin'), ctrl.create);
+router.put('/me/password', ctrl.changePassword);
+router.put('/:id', requireRole('admin'), ctrl.update);
+router.put('/:id/roles', requireRole('admin'), ctrl.updateRoles);
+router.post('/:id/deactivate', requireRole('admin'), ctrl.deactivate);
+router.post('/:id/reactivate', requireRole('admin'), ctrl.reactivate);
+router.delete('/:id', requireRole('admin'), ctrl.softDelete);
+module.exports = router;

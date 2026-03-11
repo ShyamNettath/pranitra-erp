@@ -1,0 +1,11 @@
+const router = require('express').Router();
+const { authenticate, requireRole } = require('../middleware/auth');
+const ctrl = require('../controllers/resourcesController');
+router.use(authenticate);
+router.get('/skills', ctrl.listSkills);
+router.post('/skills', requireRole('admin'), ctrl.createSkill);
+router.get('/', ctrl.list);
+router.get('/:user_id', ctrl.get);
+router.post('/', requireRole('admin'), ctrl.createOrUpdateProfile);
+router.put('/:user_id/skills', requireRole('admin'), ctrl.updateSkills);
+module.exports = router;
