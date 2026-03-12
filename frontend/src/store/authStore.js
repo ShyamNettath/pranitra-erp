@@ -7,39 +7,56 @@ const useAuthStore = create((set, get) => ({
   workspaces:    [],
   accessToken:   localStorage.getItem('pranitra_access_token'),
   isLoading:     false,
-  loginStep:     'credentials',  // credentials | otp | workspace
+  loginStep:     'credentials',
   pendingUserId: null,
 
-  // Step 1 — submit email + password, get OTP
+  // Step 1 — submit email + password
   submitCredentials: async (email, password) => {
     set({ isLoading: true });
     const { data } = await api.post('/auth/login', { email, password });
+
+    // If OTP is disabled — server returns step: 'complete' with tokens directly
+    if (data.step === 'complete') {
+      localStorage.setItem('pranitra_access_token', data.access_token);
+      localStorage.setItem('pranitra_refresh_token', data.refresh_token);
+      set({
+        user:        data.user,
+        workspaces:  data.user.workspaces || [],
+        accessToken: data.access_token,
+        loginStep:   'workspace',
+        isLoading:   false,
+      });
+      return data;
+    }
+
+    // OTP is enabled — go to OTP step
     set({ loginStep: 'otp', pendingUserId: data.user_id, isLoading: false });
     return data;
   },
 
-  // Step 2 — verify OTP, get workspaces list
+  // Step 2 — verify OTP
   verifyOtp: async (userId, otp) => {
     set({ isLoading: true });
     const { data } = await api.post('/auth/verify-otp', { user_id: userId, otp });
     localStorage.setItem('pranitra_access_token', data.access_token);
+    localStorage.setItem('pranitra_refresh_token', data.refresh_token);
     set({
-      user:          data.user,
-      workspaces:    data.workspaces,
-      accessToken:   data.access_token,
-      loginStep:     data.workspaces.length === 1 ? 'workspace_auto' : 'workspace',
-      isLoading:     false,
+      user:        data.user,
+      workspaces:  data.user?.workspaces || [],
+      accessToken: data.access_token,
+      loginStep:   'workspace',
+      isLoading:   false,
     });
     return data;
   },
 
-  // Step 3 — select workspace, get workspace-scoped token
+  // Step 3 — select workspace
   selectWorkspace: async (workspaceId) => {
     set({ isLoading: true });
     const { data } = await api.post('/auth/select-workspace', { workspace_id: workspaceId });
-    localStorage.setItem('pranitra_access_token', data.access_token);
-    localStorage.setItem('pranitra_refresh_token', data.refresh_token);
-    set({ workspace: data.workspace, accessToken: data.access_token, loginStep: 'done', isLoading: false });
+    localStorage.setItem('pranitra_access_token', data.access_token || localStorage.getItem('pranitra_access_token'));
+    localStorage.setItem('pranitra_refresh_token', data.refresh_token || localStorage.getItem('pranitra_refresh_token'));
+    set({ workspace: data.workspace, loginStep: 'done', isLoading: false });
     return data;
   },
 
