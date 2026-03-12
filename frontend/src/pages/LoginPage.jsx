@@ -14,8 +14,12 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     try {
-      await submitCredentials(email, password);
-      navigate('/otp');
+      const data = await submitCredentials(email, password);
+      if (data.step === 'complete') {
+        navigate('/workspace');
+      } else {
+        navigate('/otp');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     }
@@ -88,7 +92,7 @@ export default function LoginPage() {
         <div style={{ width: '100%', maxWidth: 400 }}>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--navy)', marginBottom: 6 }}>Sign in to PRANITRA PM</h2>
           <p style={{ fontSize: 13, color: 'var(--grey-text)', marginBottom: 32 }}>
-            Enter your credentials to continue. An OTP will be sent to your email.
+            Enter your credentials to continue. 
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -133,7 +137,7 @@ export default function LoginPage() {
               color: 'white', border: 'none', borderRadius: 8, fontFamily: 'var(--font)',
               fontSize: 14, fontWeight: 700, cursor: isLoading ? 'not-allowed' : 'pointer',
             }}>
-              {isLoading ? 'Sending OTP…' : 'Continue to OTP Verification →'}
+              {isLoading ? 'Signing in…' : 'Sign In →'}
             </button>
           </form>
 
