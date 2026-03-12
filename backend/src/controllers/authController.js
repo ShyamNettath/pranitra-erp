@@ -1,262 +1,151 @@
-const bcrypt  = require('bcryptjs');
-const jwt     = require('jsonwebtoken');
-const crypto  = require('crypto');
-const { validationResult } = require('express-validator');
-const db      = require('../config/db');
-const logger  = require('../config/logger');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const db = require('../config/db');
 const { sendOtpEmail } = require('../services/emailService');
 const { writeAuditLog } = require('../utils/audit');
 
-// ── helpers ──────────────────────────────────────────────────────
-function makeAccessToken(userId, roles, workspaceId) {
-  return jwt.sign(
-    { sub: userId, roles, ws: workspaceId || null },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
-  );
-}
-
-function makeRefreshToken(userId) {
-  return jwt.sign(
-    { sub: userId, type: 'refresh' },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
-  );
-}
-
 function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function getSetting(key, fallback) {
-  const row = await db('system_settings').where({ key }).first();
-  return row ? row.value : fallback;
+function generateTokens(user) {
+  const payload = { id: user.id, email: user.email, roles: user.roles };
+  const access = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' });
+  const refresh = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' });
+  return { access, refresh };
 }
 
-// ── POST /api/auth/login ──────────────────────────────────────────
 exports.login = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
-
     const { email, password } = req.body;
+    if (!email || !password) return res.status(422).json({ error: 'Email and password required' });
 
-    const user = await db('users').where({ email, is_active: true, is_deleted: false }).first();
-    if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+    const user = await db('users').where({ email: email.toLowerCase(), is_deleted: false }).first();
+    if (!user || !user.is_active) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) return res.status(401).json({ error: 'Invalid email or password' });
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // Generate & store OTP
-    const otp = generateOtp();
-    const expiryMinutes = parseInt(await getSetting('otp_expiry_minutes', '10'));
-    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+    // Get user roles
+    const roleRows = await db('user_roles').where({ user_id: user.id });
+    user.roles = roleRows.map(r => r.role);
 
-    // Invalidate old codes
-    await db('otp_codes').where({ user_id: user.id, used: false }).update({ used: true });
+    // Check if OTP is enabled
+    const otpSetting = await db('system_settings').where({ key: 'otp_enabled' }).first();
+    const otpEnabled = otpSetting?.value === 'true';
 
-    await db('otp_codes').insert({
-      user_id: user.id,
-      code: otp,
-      expires_at: expiresAt,
-    });
-
-    // Send OTP email (fire-and-forget in prod; await in dev for easier debugging)
-    try {
-      await sendOtpEmail(user.email, user.name, otp);
-    } catch (emailErr) {
-      logger.error('OTP email failed:', emailErr.message);
+    if (!otpEnabled) {
+      // Skip OTP — issue tokens directly
+      const tokens = generateTokens(user);
+      await db('refresh_tokens').insert({ user_id: user.id, token: tokens.refresh, expires_at: new Date(Date.now() + 7*24*60*60*1000) });
+      await writeAuditLog(user.id, 'auth.login', 'user', user.id, { email }, req);
+      return res.json({ step: 'complete', access_token: tokens.access, refresh_token: tokens.refresh, user: { id: user.id, name: user.name, email: user.email, roles: user.roles } });
     }
 
-    await writeAuditLog(user.id, 'auth.otp_sent', 'user', user.id, null, req);
+    // OTP enabled — generate and send OTP
+    const code = generateOtp();
+    const expires_at = new Date(Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES || 10)) * 60 * 1000);
+    await db('otp_codes').insert({ user_id: user.id, code, expires_at });
 
-    return res.json({
-      step: 'otp',
-      user_id: user.id,
-      email_hint: email.replace(/(.{2}).+(@.+)/, '$1***$2'),
+    await sendOtpEmail(user.email, user.name, code).catch(e => {
+      console.error('OTP email failed:', e.message);
     });
+
+    return res.json({ step: 'otp', user_id: user.id });
   } catch (err) { next(err); }
 };
 
-// ── POST /api/auth/verify-otp ─────────────────────────────────────
 exports.verifyOtp = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
+    const { user_id, code } = req.body;
+    if (!user_id || !code) return res.status(422).json({ error: 'user_id and code required' });
 
-    const { user_id, otp } = req.body;
-    const maxAttempts = parseInt(await getSetting('otp_max_attempts', '3'));
-
-    const record = await db('otp_codes')
-      .where({ user_id, used: false })
+    const otp = await db('otp_codes')
+      .where({ user_id, code, used: false })
       .where('expires_at', '>', new Date())
       .orderBy('created_at', 'desc')
       .first();
 
-    if (!record) return res.status(401).json({ error: 'OTP expired or not found. Please log in again.' });
+    if (!otp) return res.status(401).json({ error: 'Invalid or expired OTP' });
 
-    if (record.attempts >= maxAttempts) {
-      return res.status(429).json({ error: 'Too many failed attempts. Please request a new OTP.' });
-    }
+    await db('otp_codes').where({ id: otp.id }).update({ used: true });
 
-    if (record.code !== otp) {
-      await db('otp_codes').where({ id: record.id }).increment('attempts', 1);
-      return res.status(401).json({
-        error: 'Invalid OTP',
-        remaining: maxAttempts - record.attempts - 1,
-      });
-    }
+    const user = await db('users').where({ id: user_id }).first();
+    const roleRows = await db('user_roles').where({ user_id });
+    user.roles = roleRows.map(r => r.role);
 
-    // Mark used
-    await db('otp_codes').where({ id: record.id }).update({ used: true });
+    const tokens = generateTokens(user);
+    await db('refresh_tokens').insert({ user_id: user.id, token: tokens.refresh, expires_at: new Date(Date.now() + 7*24*60*60*1000) });
+    await writeAuditLog(user.id, 'auth.login', 'user', user.id, {}, req);
 
-    // Update last login
-    await db('users').where({ id: user_id }).update({ last_login: new Date() });
-
-    const user  = await db('users').where({ id: user_id }).first();
-    const roles = (await db('user_roles').where({ user_id }).select('role')).map((r) => r.role);
-
-    // Get workspaces this user belongs to
-    const workspaces = await db('workspace_members as wm')
-      .join('workspaces as w', 'w.id', 'wm.workspace_id')
-      .where({ 'wm.user_id': user_id, 'wm.is_active': true, 'w.is_active': true })
-      .select('w.id', 'w.name', 'w.slug', 'w.color');
-
-    // Issue a pre-workspace token (no ws claim yet)
-    const accessToken = makeAccessToken(user_id, roles, null);
-
-    await writeAuditLog(user_id, 'auth.login', 'user', user_id, null, req);
-
-    return res.json({
-      step: workspaces.length === 1 ? 'workspace_auto' : 'workspace_select',
-      access_token: accessToken,
-      user: { id: user.id, name: user.name, email: user.email, roles },
-      workspaces,
-    });
+    return res.json({ step: 'complete', access_token: tokens.access, refresh_token: tokens.refresh, user: { id: user.id, name: user.name, email: user.email, roles: user.roles } });
   } catch (err) { next(err); }
 };
 
-// ── POST /api/auth/resend-otp ─────────────────────────────────────
 exports.resendOtp = async (req, res, next) => {
   try {
     const { user_id } = req.body;
-    const user = await db('users').where({ id: user_id, is_active: true }).first();
+    const user = await db('users').where({ id: user_id }).first();
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const otp = generateOtp();
-    const expiryMinutes = parseInt(await getSetting('otp_expiry_minutes', '10'));
-    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+    const code = generateOtp();
+    const expires_at = new Date(Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES || 10)) * 60 * 1000);
+    await db('otp_codes').insert({ user_id, code, expires_at });
 
-    await db('otp_codes').where({ user_id, used: false }).update({ used: true });
-    await db('otp_codes').insert({ user_id, code: otp, expires_at: expiresAt });
-
-    await sendOtpEmail(user.email, user.name, otp).catch((e) => logger.error(e));
+    await sendOtpEmail(user.email, user.name, code).catch(e => {
+      console.error('OTP email failed:', e.message);
+    });
 
     return res.json({ ok: true });
   } catch (err) { next(err); }
 };
 
-// ── POST /api/auth/select-workspace ──────────────────────────────
 exports.selectWorkspace = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
-
     const { workspace_id } = req.body;
-    const userId = req.user.id;
-
-    // Admins/Directors can access any workspace
-    if (!req.user.roles.includes('admin') && !req.user.roles.includes('director')) {
-      const member = await db('workspace_members')
-        .where({ workspace_id, user_id: userId, is_active: true })
-        .first();
-      if (!member) return res.status(403).json({ error: 'Not a member of this workspace' });
-    }
-
-    const ws = await db('workspaces').where({ id: workspace_id, is_active: true }).first();
-    if (!ws) return res.status(404).json({ error: 'Workspace not found' });
-
-    const roles = req.user.roles;
-    const accessToken  = makeAccessToken(userId, roles, workspace_id);
-    const refreshToken = makeRefreshToken(userId);
-
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-    await db('refresh_tokens').insert({
-      user_id: userId,
-      token: refreshToken,
-      expires_at: expiresAt,
-      device_info: req.headers['user-agent'] || null,
-    });
-
-    return res.json({
-      access_token:  accessToken,
-      refresh_token: refreshToken,
-      workspace: { id: ws.id, name: ws.name, slug: ws.slug, color: ws.color },
-    });
+    const member = await db('workspace_members').where({ user_id: req.user.id, workspace_id, is_active: true }).first();
+    if (!member) return res.status(403).json({ error: 'Not a member of this workspace' });
+    const workspace = await db('workspaces').where({ id: workspace_id }).first();
+    return res.json({ workspace });
   } catch (err) { next(err); }
 };
 
-// ── POST /api/auth/refresh ────────────────────────────────────────
 exports.refresh = async (req, res, next) => {
   try {
     const { refresh_token } = req.body;
-    if (!refresh_token) return res.status(400).json({ error: 'Refresh token required' });
-
-    let payload;
-    try {
-      payload = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
-    } catch {
-      return res.status(401).json({ error: 'Invalid refresh token' });
-    }
-
-    const record = await db('refresh_tokens')
-      .where({ token: refresh_token, revoked: false })
-      .where('expires_at', '>', new Date())
-      .first();
-    if (!record) return res.status(401).json({ error: 'Refresh token revoked or expired' });
-
-    const user  = await db('users').where({ id: payload.sub, is_active: true }).first();
-    const roles = (await db('user_roles').where({ user_id: payload.sub }).select('role')).map((r) => r.role);
-
-    const accessToken = makeAccessToken(user.id, roles, null);
-    return res.json({ access_token: accessToken });
+    if (!refresh_token) return res.status(422).json({ error: 'refresh_token required' });
+    const stored = await db('refresh_tokens').where({ token: refresh_token }).first();
+    if (!stored || new Date(stored.expires_at) < new Date()) return res.status(401).json({ error: 'Invalid refresh token' });
+    const payload = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+    const user = await db('users').where({ id: payload.id }).first();
+    const roleRows = await db('user_roles').where({ user_id: user.id });
+    user.roles = roleRows.map(r => r.role);
+    const tokens = generateTokens(user);
+    await db('refresh_tokens').where({ token: refresh_token }).delete();
+    await db('refresh_tokens').insert({ user_id: user.id, token: tokens.refresh, expires_at: new Date(Date.now() + 7*24*60*60*1000) });
+    return res.json({ access_token: tokens.access, refresh_token: tokens.refresh });
   } catch (err) { next(err); }
 };
 
-// ── POST /api/auth/logout ─────────────────────────────────────────
 exports.logout = async (req, res, next) => {
   try {
     const { refresh_token } = req.body;
-    if (refresh_token) {
-      await db('refresh_tokens').where({ token: refresh_token }).update({ revoked: true });
-    }
-    await writeAuditLog(req.user.id, 'auth.logout', 'user', req.user.id, null, req);
+    if (refresh_token) await db('refresh_tokens').where({ token: refresh_token }).delete();
     return res.json({ ok: true });
   } catch (err) { next(err); }
 };
 
-// ── GET /api/auth/me ──────────────────────────────────────────────
-exports.me = async (req, res) => {
-  const workspaces = await db('workspace_members as wm')
-    .join('workspaces as w', 'w.id', 'wm.workspace_id')
-    .where({ 'wm.user_id': req.user.id, 'wm.is_active': true, 'w.is_active': true })
-    .select('w.id', 'w.name', 'w.slug', 'w.color');
-  return res.json({ ...req.user, workspaces });
-};
-
-// ── POST /api/auth/forgot-password ───────────────────────────────
-exports.forgotPassword = async (req, res, next) => {
+exports.me = async (req, res, next) => {
   try {
-    const { email } = req.body;
-    const user = await db('users').where({ email, is_active: true }).first();
-    // Always respond OK to avoid user enumeration
-    if (!user) return res.json({ ok: true });
-    // In production: generate a secure reset token, store it, send email
-    // For now: stub
-    logger.info(`Password reset requested for ${email}`);
-    return res.json({ ok: true });
+    const user = await db('users').where({ id: req.user.id }).first();
+    const roleRows = await db('user_roles').where({ user_id: req.user.id });
+    user.roles = roleRows.map(r => r.role);
+    const workspaces = await db('workspace_members as wm')
+      .join('workspaces as w', 'w.id', 'wm.workspace_id')
+      .where({ 'wm.user_id': req.user.id, 'wm.is_active': true })
+      .select('w.id', 'w.name', 'w.slug');
+    delete user.password_hash;
+    return res.json({ ...user, workspaces });
   } catch (err) { next(err); }
 };
-
-exports.resetPassword = async (_req, res) => res.json({ ok: true }); // stub
+ENDOFFILE
