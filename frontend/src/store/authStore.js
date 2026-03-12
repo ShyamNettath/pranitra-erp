@@ -17,18 +17,17 @@ const useAuthStore = create((set, get) => ({
 
     // If OTP is disabled — server returns step: 'complete' with tokens directly
     if (data.step === 'complete') {
-      localStorage.setItem('pranitra_access_token', data.access_token);
-      localStorage.setItem('pranitra_refresh_token', data.refresh_token);
-      set({
-        user:        data.user,
-        workspaces:  data.user.workspaces || [],
-        accessToken: data.access_token,
-        loginStep:   'workspace',
-        isLoading:   false,
-      });
-      return data;
-    }
-
+  	localStorage.setItem('pranitra_access_token', data.access_token);
+  	localStorage.setItem('pranitra_refresh_token', data.refresh_token);
+  	set({
+   	 user:        data.user,
+    	 workspaces:  data.workspaces || [],
+    	 accessToken: data.access_token,
+    	 loginStep:   'workspace',
+     isLoading:   false,
+   });
+   return data;
+  }
     // OTP is enabled — go to OTP step
     set({ loginStep: 'otp', pendingUserId: data.user_id, isLoading: false });
     return data;
