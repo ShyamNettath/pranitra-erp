@@ -38,6 +38,20 @@ export default function App() {
     if (accessToken && !user) loadMe();
   }, [accessToken]);
 
+  useEffect(() => {
+    const onBlur = (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement)) return;
+      if (t.type === 'email' || t.type === 'url') return;
+      const value = t.value;
+      if (typeof value === 'string' && value.trim().length > 0) {
+        t.value = value.toUpperCase();
+      }
+    };
+    document.addEventListener('blur', onBlur, true);
+    return () => document.removeEventListener('blur', onBlur, true);
+  }, []);
+
   return (
     <QueryClientProvider client={qc}>
       <BrowserRouter>

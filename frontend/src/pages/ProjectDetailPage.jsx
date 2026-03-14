@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
 import useAuthStore from '@/store/authStore';
 
-const TABS = ['Overview','Design','Simulation','Planning','Layout','Tasks','Files'];
+const TABS = ['Overview','Design','Simulation','Planning','Layout','Tasks','LOP','Files'];
 const SC = { active:'#4AE08A',pending_approval:'#B86A00',draft:'#B0BAC8',on_hold:'#E8232A',completed:'#0A7A79',changes_requested:'#E8232A' };
 const SL = { active:'Active',pending_approval:'Pending Approval',draft:'Draft',on_hold:'On Hold',completed:'Completed',changes_requested:'Changes Requested' };
 
@@ -53,8 +53,30 @@ export default function ProjectDetailPage() {
   const submitMut = useMutation({ mutationFn:()=>api.post(`/projects/${id}/submit`), onSuccess:()=>qc.invalidateQueries(['project',id]) });
   const initDesign = useMutation({ mutationFn:()=>api.post(`/categories/design/${id}/init`,{}), onSuccess:()=>qc.invalidateQueries(['design',id]) });
 
-  if (isLoading) return <div style={{ padding:28,color:'var(--grey-text)' }}>Loading…</div>;
-  if (!project) return <div style={{ padding:28 }}>Not found.</div>;
+  const [lopStatusFilter, setLopStatusFilter] = useState('');
+  const [lopImpactFilter, setLopImpactFilter] = useState('');
+  const [lopSectionFilter, setLopSectionFilter] = useState('');
+  const [lopOwnerFilter, setLopOwnerFilter] = useState('');
+  const [lopAddingSection, setLopAddingSection] = useState(false);
+  const [newSectionName, setNewSectionName] = useState('');
+  const [newSectionDescription, setNewSectionDescription] = useState('');
+
+  const { data: lopSections=[] } = useQuery({
+    queryKey: ['lop-sections', project?.workspace_id],
+    queryFn: () => api.get(`/tenants/${project.workspace_id}/lop-sections`).then(r=>r.data),
+    enabled: !!project,
+  });
+
+  const { data: lopItems=[], isFetching: lopLoading, refetch: refetchLop } = useQuery({
+    queryKey: ['lop-items', id, lopStatusFilter, lopImpactFilter, lopSectionFilter, lopOwnerFilter],
+    queryFn: () => api.get(`/projects/${id}/lop`, { params: {
+      status: lopStatusFilter || undefined,
+      impact: lopImpactFilter || undefined,
+      section_id: lopSectionFilter || undefined,
+      owner_id: lopOwnerFilter || undefined,
+    } }).then(r=>r.data),
+    enabled: !!project && tab === 'LOP',
+  });
 
   return (
     <div style={{ padding:28 }}>
@@ -184,8 +206,7 @@ export default function ProjectDetailPage() {
 
       {(tab==='Planning'||tab==='Layout')&&<PlanningLayoutTab type={tab.toLowerCase()} projectId={id} isPM={isPM}/>}
       {tab==='Tasks'&&<TasksPanel projectId={id}/>}
-      {tab==='Files'&&<FilesTab projectId={id}/>}
-
+      {tab==='LOP'&&<LopTab projectId={id} project={project} user={user} lopSections={lopSections} lopItems={lopItems} lopLoading={lopLoading} refetchLop={refetchLop} lopStatusFilter={lopStatusFilter} setLopStatusFilter={setLopStatusFilter} lopImpactFilter={lopImpactFilter} setLopImpactFilter={setLopImpactFilter} lopSectionFilter={lopSectionFilter} setLopSectionFilter={setLopSectionFilter} lopOwnerFilter={lopOwnerFilter} setLopOwnerFilter={setLopOwnerFilter} lopAddingSection={lopAddingSection} setLopAddingSection={setLopAddingSection} newSectionName={newSectionName} setNewSectionName={setNewSectionName} newSectionDescription={newSectionDescription} setNewSectionDescription={setNewSectionDescription} qc={qc} isPM={isPM}/>}
       {/* Approval modal */}
       {modal&&(
         <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200 }}>
@@ -345,6 +366,159 @@ function PlanningLayoutTab({ type, projectId, isPM }) {
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── LOP Tab ──────────────────────────────────────────────────────
+const IMPACT_COLORS = { High:'var(--red)', Medium:'var(--amber)', Low:'var(--green)' };
+const IMPACT_BG = { High:'rgba(232,35,42,0.08)', Medium:'rgba(184,106,0,0.08)', Low:'rgba(10,122,121,0.08)' };
+const STATUS_COLORS = { Open:'var(--amber)', Closed:'var(--green)', 'Force Closed':'#C94A1A' };
+const STATUS_BG = { Open:'rgba(184,106,0,0.08)', Closed:'rgba(10,122,121,0.08)', 'Force Closed':'rgba(201,74,26,0.08)' };
+
+function LopTab({ projectId, project, user, lopSections, lopItems, lopLoading, refetchLop,
+  lopStatusFilter, setLopStatusFilter, lopImpactFilter, setLopImpactFilter,
+  lopSectionFilter, setLopSectionFilter, lopOwnerFilter, setLopOwnerFilter,
+  lopAddingSection, setLopAddingSection, newSectionName, setNewSectionName,
+  newSectionDescription, setNewSectionDescription, qc, isPM }) {
+
+  // Summary counts (computed from ALL items, not just filtered — fetch unfiltered for counts)
+  const { data: allLopItems=[] } = useQuery({
+    queryKey: ['lop-items-all', projectId],
+    queryFn: () => api.get(`/projects/${projectId}/lop`).then(r=>r.data),
+    enabled: !!project,
+  });
+  const totalCount = allLopItems.length;
+  const openCount = allLopItems.filter(i=>i.status==='Open').length;
+  const closedCount = allLopItems.filter(i=>i.status==='Closed').length;
+  const forceClosedCount = allLopItems.filter(i=>i.status==='Force Closed').length;
+  const highOpenCount = allLopItems.filter(i=>i.status==='Open'&&i.impact==='High').length;
+
+  const handleAddRow = async () => {
+    // Let server auto-calculate target_date via addWorkingDays
+    const newItem = {
+      date_raised: new Date().toISOString().split('T')[0],
+      description: 'New LOP entry',
+      impact: 'Medium',
+      status: 'Open',
+    };
+    await api.post(`/projects/${projectId}/lop`, newItem);
+    refetchLop();
+    qc.invalidateQueries(['lop-items-all', projectId]);
+  };
+
+  const handleExport = async () => {
+    const url = `/projects/${projectId}/lop/export?status=${lopStatusFilter||''}&impact=${lopImpactFilter||''}&section_id=${lopSectionFilter||''}&owner_id=${lopOwnerFilter||''}`;
+    const resp = await api.get(url, { responseType:'blob' });
+    const blob = new Blob([resp.data], { type:'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `lop_${projectId}.csv`;
+    link.click();
+  };
+
+  const updateItem = async (itemId, payload) => {
+    await api.put(`/projects/${projectId}/lop/${itemId}`, payload);
+    refetchLop();
+    qc.invalidateQueries(['lop-items-all', projectId]);
+  };
+
+  const deleteItem = async (itemId) => {
+    await api.delete(`/projects/${projectId}/lop/${itemId}`);
+    refetchLop();
+    qc.invalidateQueries(['lop-items-all', projectId]);
+  };
+
+  return (
+    <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:14 }}>
+      {/* Header */}
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
+        <div>
+          <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)' }}>LOP — List of Open Points</div>
+          <div style={{ fontSize:12,color:'var(--grey-text)' }}>Live per-project issue tracker with inline updates.</div>
+        </div>
+        <div style={{ display:'flex',gap:8 }}>
+          <button onClick={()=>refetchLop()} style={{ padding:'6px 10px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontSize:12 }}>Refresh</button>
+          <button onClick={handleExport} style={{ padding:'6px 10px',background:'var(--green)',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontSize:12 }}>Export CSV</button>
+        </div>
+      </div>
+
+      {/* Summary bar */}
+      <div style={{ display:'flex',gap:10,marginBottom:14 }}>
+        {[
+          { label:'Total', value:totalCount, color:'var(--navy)', bg:'var(--navy-xlight)' },
+          { label:'Open', value:openCount, color:'var(--amber)', bg:'rgba(184,106,0,0.08)' },
+          { label:'Closed', value:closedCount, color:'var(--green)', bg:'rgba(10,122,121,0.08)' },
+          { label:'Force Closed', value:forceClosedCount, color:'#C94A1A', bg:'rgba(201,74,26,0.08)' },
+          { label:'High + Open', value:highOpenCount, color:'var(--red)', bg:'rgba(232,35,42,0.08)' },
+        ].map(s=>(
+          <div key={s.label} style={{ flex:1,padding:'10px 14px',background:s.bg,borderRadius:8,textAlign:'center' }}>
+            <div style={{ fontSize:20,fontWeight:700,color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:11,fontWeight:700,color:s.color,opacity:0.8 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginBottom:10 }}>
+        {['Open','Closed','Force Closed'].map(s=>(<button key={s} onClick={()=>setLopStatusFilter(lopStatusFilter===s?'':s)} style={{ padding:'5px 10px',border:'1px solid var(--grey-border)',borderRadius:5,background:lopStatusFilter===s?'#E8EEF6':'white',cursor:'pointer',fontSize:11 }}>{s}</button>))}
+        {['High','Medium','Low'].map(s=>(<button key={s} onClick={()=>setLopImpactFilter(lopImpactFilter===s?'':s)} style={{ padding:'5px 10px',border:'1px solid var(--grey-border)',borderRadius:5,background:lopImpactFilter===s?'#E8EEF6':'white',cursor:'pointer',fontSize:11 }}>{s}</button>))}
+        <select value={lopSectionFilter} onChange={e=>setLopSectionFilter(e.target.value)} style={{ height:30,border:'1px solid var(--grey-border)',borderRadius:5,fontSize:12 }}>
+          <option value=''>All sections</option>
+          {lopSections.filter(s=>s.is_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <select value={lopOwnerFilter} onChange={e=>setLopOwnerFilter(e.target.value)} style={{ height:30,border:'1px solid var(--grey-border)',borderRadius:5,fontSize:12 }}>
+          <option value=''>All owners</option>
+          {project.members?.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      </div>
+
+      {/* Actions */}
+      <div style={{ marginBottom:10,display:'flex',gap:8,flexWrap:'wrap' }}>
+        {isPM && <button onClick={handleAddRow} style={{ padding:'6px 10px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontSize:12 }}>+ Add Row</button>}
+        {lopAddingSection ? (
+          <div style={{ display:'flex',gap:6 }}>
+            <input value={newSectionName} onChange={e=>setNewSectionName(e.target.value)} placeholder='Section name' style={{ height:30,border:'1px solid var(--grey-border)',borderRadius:5,padding:'0 8px' }}/>
+            <input value={newSectionDescription} onChange={e=>setNewSectionDescription(e.target.value)} placeholder='Description' style={{ height:30,border:'1px solid var(--grey-border)',borderRadius:5,padding:'0 8px' }}/>
+            <button onClick={async()=>{ if (!newSectionName) return; await api.post(`/tenants/${project.workspace_id}/lop-sections`, { name:newSectionName, description:newSectionDescription }); setNewSectionName(''); setNewSectionDescription(''); setLopAddingSection(false); qc.invalidateQueries(['lop-sections', project.workspace_id]); }} style={{ padding:'6px 10px',background:'var(--green)',color:'white',border:'none',borderRadius:5, cursor:'pointer' }}>Save</button>
+            <button onClick={()=>setLopAddingSection(false)} style={{ padding:'6px 10px',background:'var(--grey-border)',border:'none',borderRadius:5,cursor:'pointer' }}>Cancel</button>
+          </div>
+        ) : (
+          isPM && <button onClick={()=>setLopAddingSection(true)} style={{ padding:'6px 10px',background:'var(--amber)',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontSize:12 }}>+ Add section</button>
+        )}
+      </div>
+
+      {/* Table */}
+      <div style={{ overflowX:'auto' }}>
+        <table style={{ width:'100%',borderCollapse:'collapse' }}>
+          <thead><tr>
+            {['SI','Date Raised','Section','Description','Raised By','Owner','Impact','Status','Target Date','Closed Date','Closed By','Comments',''].map(h=><th key={h} style={{ textAlign:'left',fontSize:10,padding:'8px',color:'var(--grey-text)',borderBottom:'1px solid var(--grey-border)',fontWeight:700,letterSpacing:0.5,textTransform:'uppercase' }}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {lopLoading ? <tr><td colSpan={13} style={{ padding:12,color:'var(--grey-text)' }}>Loading…</td></tr> : lopItems.length===0 ? <tr><td colSpan={13} style={{ padding:12,color:'var(--grey-text)' }}>No open points.</td></tr> : lopItems.map(item => {
+                const overdue = item.status === 'Open' && item.target_date && new Date(item.target_date) < new Date();
+                const rowBg = overdue ? '#fff0f0' : 'white';
+                return (
+                  <tr key={item.id} style={{ background: rowBg }}>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8',fontSize:12,fontWeight:700,color:'var(--navy)' }}>{item.si}</td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><input type='date' value={item.date_raised?.slice(0,10)||''} onChange={e=>updateItem(item.id, { date_raised:e.target.value })} style={{ fontSize:12,border:'1px solid var(--grey-border)',borderRadius:4 }} /></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><select value={item.section_id||''} onChange={e=>updateItem(item.id, { section_id:e.target.value || null })} style={{ fontSize:12,border:'1px solid var(--grey-border)',borderRadius:4 }}><option value=''>—</option>{lopSections.filter(s=>s.is_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><input defaultValue={item.description||''} onBlur={e=>{ if(e.target.value!==item.description) updateItem(item.id, { description:e.target.value }); }} style={{ width:220,fontSize:12,border:'1px solid var(--grey-border)',borderRadius:4,padding:'3px 6px' }} /></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8',fontSize:12,color:'var(--grey-text)' }}>{item.raised_by_name||''}</td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><select value={item.owner||''} onChange={e=>updateItem(item.id, { owner:e.target.value || null })} style={{ fontSize:12,border:'1px solid var(--grey-border)',borderRadius:4 }}><option value=''>—</option>{project.members?.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><select value={item.impact||'Low'} onChange={e=>updateItem(item.id, { impact:e.target.value })} style={{ fontSize:12,border:`1.5px solid ${IMPACT_COLORS[item.impact]||'var(--grey-border)'}`,borderRadius:4,background:IMPACT_BG[item.impact]||'white',color:IMPACT_COLORS[item.impact],fontWeight:700 }}><option>High</option><option>Medium</option><option>Low</option></select></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><select value={item.status||'Open'} onChange={e=>{ const status=e.target.value; const payload={status}; if (status!=='Open') { payload.closed_date=new Date().toISOString().slice(0,10); payload.closed_by=user?.id; } updateItem(item.id, payload); }} style={{ fontSize:12,border:`1.5px solid ${STATUS_COLORS[item.status]||'var(--grey-border)'}`,borderRadius:4,background:STATUS_BG[item.status]||'white',color:STATUS_COLORS[item.status],fontWeight:700 }}><option>Open</option><option>Closed</option><option>Force Closed</option></select></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><input type='date' value={item.target_date?.slice(0,10)||''} onChange={e=>updateItem(item.id, { target_date:e.target.value })} style={{ fontSize:12,border:`1px solid ${overdue?'var(--red)':'var(--grey-border)'}`,borderRadius:4,color:overdue?'var(--red)':'inherit' }} /></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><input type='date' value={item.closed_date?.slice(0,10)||''} onChange={e=>updateItem(item.id, { closed_date:e.target.value })} style={{ fontSize:12,border:'1px solid var(--grey-border)',borderRadius:4 }} /></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8',fontSize:12,color:'var(--grey-text)' }}>{item.closed_by_name||''}</td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}><input defaultValue={item.comments||''} onBlur={e=>{ if(e.target.value!==(item.comments||'')) updateItem(item.id, { comments:e.target.value }); }} style={{ width:160,fontSize:12,border:'1px solid var(--grey-border)',borderRadius:4,padding:'3px 6px' }} /></td>
+                    <td style={{ padding:6,borderBottom:'1px solid #f0f3f8' }}>{isPM && <button onClick={()=>deleteItem(item.id)} style={{ fontSize:11,padding:'4px 8px',background:'var(--red)',color:'white',border:'none',borderRadius:4,cursor:'pointer' }}>Delete</button>}</td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

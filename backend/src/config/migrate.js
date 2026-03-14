@@ -118,6 +118,54 @@ async function migrate() {
       t.timestamps(true, true);
     })
 
+    // ── HOLIDAYS (tenant-level) ───────────────────────────────────
+    .createTableIfNotExists('holidays', (t) => {
+      t.uuid('id').primary().defaultTo(db.raw('uuid_generate_v4()'));
+      t.uuid('tenant_id').references('id').inTable('workspaces').onDelete('CASCADE').notNullable();
+      t.string('name').notNullable();
+      t.date('date').notNullable();
+      t.string('holiday_type').notNullable().defaultTo('Public'); // Public | Company | Optional
+      t.boolean('is_active').defaultTo(true);
+      t.uuid('created_by').references('id').inTable('users');
+      t.boolean('is_deleted').defaultTo(false);
+      t.timestamps(true, true);
+      t.unique(['tenant_id', 'date']);
+    })
+
+    // ── LOP SECTIONS (tenant-level) ───────────────────────────────
+    .createTableIfNotExists('lop_sections', (t) => {
+      t.uuid('id').primary().defaultTo(db.raw('uuid_generate_v4()'));
+      t.uuid('tenant_id').references('id').inTable('workspaces').onDelete('CASCADE').notNullable();
+      t.string('name').notNullable();
+      t.text('description');
+      t.boolean('is_active').defaultTo(true);
+      t.boolean('is_deleted').defaultTo(false);
+      t.timestamps(true, true);
+      t.unique(['tenant_id', 'name']);
+    })
+
+    // ── LOP ITEMS (per project) ──────────────────────────────────
+    .createTableIfNotExists('lop_items', (t) => {
+      t.uuid('id').primary().defaultTo(db.raw('uuid_generate_v4()'));
+      t.uuid('tenant_id').references('id').inTable('workspaces').onDelete('CASCADE').notNullable();
+      t.uuid('project_id').references('id').inTable('projects').onDelete('CASCADE').notNullable();
+      t.integer('si').notNullable();
+      t.date('date_raised').notNullable();
+      t.uuid('section_id').references('id').inTable('lop_sections');
+      t.text('description').notNullable();
+      t.uuid('raised_by').references('id').inTable('users');
+      t.uuid('owner').references('id').inTable('users');
+      t.string('impact').notNullable();
+      t.string('status').notNullable().defaultTo('Open');
+      t.date('target_date').notNullable();
+      t.date('closed_date');
+      t.uuid('closed_by').references('id').inTable('users');
+      t.text('comments');
+      t.boolean('is_deleted').defaultTo(false);
+      t.timestamps(true, true);
+      t.unique(['project_id', 'si']);
+    })
+
     // ── PROJECT MEMBERS ───────────────────────────────────────────
     .createTableIfNotExists('project_members', (t) => {
       t.uuid('id').primary().defaultTo(db.raw('uuid_generate_v4()'));
@@ -508,6 +556,7 @@ async function rollback() {
     'simulation_robot_categories',
     'design_unit_qc', 'design_units', 'design_stations',
     'design_zones', 'design_subcategories',
+    'lop_items', 'lop_sections', 'holidays',
     'milestones', 'project_members', 'projects',
     'system_settings', 'refresh_tokens', 'otp_codes',
     'workspace_members', 'user_roles', 'users', 'workspaces',

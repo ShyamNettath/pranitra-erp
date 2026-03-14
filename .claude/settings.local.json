@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"export.*csv\\\\|export.*xlsx\\\\|import.*csv\\\\|import.*xlsx\" /c/ERP/pranitra --include=*.js --include=*.jsx)"
+    ]
+  }
+}

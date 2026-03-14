@@ -30,6 +30,14 @@ async function seed() {
     }
   }
 
+  // ── Default LOP sections (per workspace)
+  const defaultLopSections = [
+    'Timeline','Budget','Scope','Design','Simulation','Planning','Layout','QC','Resource','Risk','Client','General'
+  ];
+  for (const section of defaultLopSections) {
+    await db('lop_sections').insert({ tenant_id: ws.id, name: section, description: `${section} issues`, is_active: true }).onConflict(['tenant_id','name']).ignore();
+  }
+
   // ── System settings ──────────────────────────────────────────
   const settings = [
     { key: 'session_timeout_minutes',   value: '30',    description: 'Auto-logout after N minutes of inactivity' },

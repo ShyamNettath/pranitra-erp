@@ -42,7 +42,8 @@ app.use('/api/resources',   require('./routes/resources'));
 app.use('/api/admin',       require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/categories',   require('./routes/categories'));
-
+app.use('/api', require('./routes/lop'));
+app.use('/api', require('./routes/holidays'));
 // ── 404 ───────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 

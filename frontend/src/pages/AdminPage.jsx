@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
+import useAuthStore from '@/store/authStore';
 
 const ADMIN_SECTIONS = [
   { key:'users',      label:'User Management',      group:'Access & Users' },
@@ -8,6 +9,8 @@ const ADMIN_SECTIONS = [
   { key:'roles',      label:'Roles & Permissions',   group:'Access & Users' },
   { key:'audit',      label:'Audit Log',             group:'Access & Users' },
   { key:'complexity', label:'Complexity Settings',   group:'Project Config' },
+  { key:'lop-sections', label:'LOP Sections', group:'Project Config' },
+  { key:'holidays',   label:'Holiday List',          group:'Project Config' },
   { key:'visibility', label:'Report Visibility',     group:'System' },
   { key:'security',   label:'Session & Security',    group:'System' },
   { key:'recycle',    label:'Recycle Bin',           group:'System' },
@@ -163,6 +166,200 @@ function VisibilityPanel() {
   );
 }
 
+function LopSectionsPanel() {
+  const { workspace } = useAuthStore();
+  const qc = useQueryClient();
+  const { data: sections=[] } = useQuery({
+    queryKey: ['lop-sections', workspace?.id],
+    queryFn: () => api.get(`/tenants/${workspace.id}/lop-sections`).then(r=>r.data),
+    enabled: !!workspace,
+  });
+
+  const addSection = useMutation({
+    mutationFn: data => api.post(`/tenants/${workspace.id}/lop-sections`, data),
+    onSuccess: () => qc.invalidateQueries(['lop-sections', workspace?.id]),
+  });
+  const updateSection = useMutation({
+    mutationFn: ({ id, ...data }) => api.put(`/tenants/${workspace.id}/lop-sections/${id}`, data),
+    onSuccess: () => qc.invalidateQueries(['lop-sections', workspace?.id]),
+  });
+
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+
+  return (
+    <div>
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
+        <div><h2 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',marginBottom:3 }}>LOP Sections</h2><p style={{ fontSize:13,color:'var(--grey-text)' }}>{sections.length} sections</p></div>
+      </div>
+      <div style={{ marginBottom:12,display:'flex',gap:8 }}>
+        <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder='Section name' style={{ height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontSize:13 }} />
+        <input value={newDesc} onChange={e=>setNewDesc(e.target.value)} placeholder='Description' style={{ height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontSize:13 }} />
+        <button onClick={()=>{ if (!newName.trim()) return; addSection.mutate({ name:newName.trim(), description:newDesc.trim() }); setNewName(''); setNewDesc(''); }} style={{ padding:'7px 12px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,cursor:'pointer' }}>Add</button>
+      </div>
+      <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,overflow:'hidden' }}>
+        <table style={{ width:'100%',borderCollapse:'collapse' }}>
+          <thead><tr>{['Name','Description','Active'].map(h=><th key={h} style={{ padding:'8px 12px',fontSize:10.5,fontWeight:700,letterSpacing:0.8,textTransform:'uppercase',color:'var(--grey-text)',textAlign:'left',background:'var(--grey-bg)',borderBottom:'1.5px solid var(--grey-border)' }}>{h}</th>)}</tr></thead>
+          <tbody>{sections.map(s=>(
+            <tr key={s.id}>
+              <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}><input value={s.name||''} onChange={()=>{}} onBlur={e=>updateSection.mutate({ id:s.id, name:e.target.value })} style={{ width:'100%', border:'1px solid var(--grey-border)', borderRadius:5, padding:'4px 6px' }} /></td>
+              <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}><input value={s.description||''} onChange={()=>{}} onBlur={e=>updateSection.mutate({ id:s.id, description:e.target.value })} style={{ width:'100%', border:'1px solid var(--grey-border)', borderRadius:5, padding:'4px 6px' }} /></td>
+              <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}><button onClick={()=>updateSection.mutate({ id:s.id, is_active: !s.is_active })} style={{ padding:'5px 8px',background:s.is_active?'var(--green)':'var(--grey-border)',color:'white',border:'none',borderRadius:5,cursor:'pointer' }}>{s.is_active?'Active':'Inactive'}</button></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const HOLIDAY_TYPE_COLORS = { Public:'var(--navy)', Company:'var(--amber)', Optional:'var(--grey-text)' };
+const HOLIDAY_TYPE_BG = { Public:'rgba(0,50,100,0.08)', Company:'rgba(184,106,0,0.08)', Optional:'rgba(107,122,144,0.08)' };
+
+function HolidayPanel() {
+  const { workspace } = useAuthStore();
+  const qc = useQueryClient();
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+  const [showImport, setShowImport] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [newRow, setNewRow] = useState(null);
+
+  const { data: holidays=[], isLoading } = useQuery({
+    queryKey: ['holidays', workspace?.id, year],
+    queryFn: () => api.get(`/tenants/${workspace.id}/holidays`, { params: { year } }).then(r=>r.data),
+    enabled: !!workspace,
+  });
+
+  const createHoliday = useMutation({
+    mutationFn: data => api.post(`/tenants/${workspace.id}/holidays`, data).then(r=>r.data),
+    onSuccess: () => { qc.invalidateQueries(['holidays']); setNewRow(null); },
+  });
+  const updateHoliday = useMutation({
+    mutationFn: ({ id, ...data }) => api.put(`/tenants/${workspace.id}/holidays/${id}`, data).then(r=>r.data),
+    onSuccess: () => qc.invalidateQueries(['holidays']),
+  });
+  const deleteHoliday = useMutation({
+    mutationFn: id => api.delete(`/tenants/${workspace.id}/holidays/${id}`),
+    onSuccess: () => qc.invalidateQueries(['holidays']),
+  });
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const resp = await api.post(`/tenants/${workspace.id}/holidays/import`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setImportResult(resp.data);
+      qc.invalidateQueries(['holidays']);
+    } catch (err) {
+      setImportResult({ imported: 0, failed: 1, errors: [{ row: 0, error: err.response?.data?.error || 'Import failed' }] });
+    }
+    e.target.value = '';
+  };
+
+  const handleExport = async () => {
+    const resp = await api.get(`/tenants/${workspace.id}/holidays/export`, { params: { year }, responseType: 'blob' });
+    const blob = new Blob([resp.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `holidays_${year}.xlsx`;
+    link.click();
+  };
+
+  const handleTemplate = async () => {
+    const resp = await api.get(`/tenants/${workspace.id}/holidays/template`, { responseType: 'blob' });
+    const blob = new Blob([resp.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'holiday_import_template.xlsx';
+    link.click();
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}>
+        <div>
+          <h2 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',marginBottom:3 }}>Holiday List</h2>
+          <p style={{ fontSize:13,color:'var(--grey-text)' }}>{holidays.length} holidays in {year}</p>
+        </div>
+        <div style={{ display:'flex',gap:8,alignItems:'center' }}>
+          <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontSize:13,fontFamily:'var(--font)' }}>
+            {[currentYear-1, currentYear, currentYear+1, currentYear+2].map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
+          <button onClick={()=>setNewRow({ name:'', date:'', holiday_type:'Public' })} style={{ padding:'7px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>+ Add Holiday</button>
+          <button onClick={()=>setShowImport(!showImport)} style={{ padding:'7px 14px',background:'var(--amber)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Import Excel</button>
+          <button onClick={handleExport} style={{ padding:'7px 14px',background:'var(--green)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Export Excel</button>
+        </div>
+      </div>
+
+      {showImport && (
+        <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:16,marginBottom:16 }}>
+          <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:10 }}>
+            <label style={{ padding:'7px 14px',background:'var(--navy)',color:'white',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
+              Choose File
+              <input type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display:'none' }} />
+            </label>
+            <button onClick={handleTemplate} style={{ padding:'7px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:7,fontFamily:'var(--font)',fontSize:12,cursor:'pointer',color:'var(--navy)' }}>Download Template</button>
+            <button onClick={()=>{ setShowImport(false); setImportResult(null); }} style={{ padding:'7px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:7,fontFamily:'var(--font)',fontSize:12,cursor:'pointer' }}>Close</button>
+          </div>
+          {importResult && (
+            <div style={{ padding:12,background:importResult.failed?'rgba(232,35,42,0.05)':'rgba(10,122,121,0.05)',borderRadius:7,fontSize:13 }}>
+              <div style={{ fontWeight:700,color:'var(--navy)',marginBottom:6 }}>{importResult.imported} imported, {importResult.failed} failed</div>
+              {importResult.errors?.map((e,i) => (
+                <div key={i} style={{ fontSize:12,color:'var(--red)',marginBottom:2 }}>Row {e.row}: {e.error}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,overflow:'hidden' }}>
+        {isLoading ? <div style={{ padding:30,textAlign:'center',color:'var(--grey-text)',fontSize:13 }}>Loading…</div> : (
+          <table style={{ width:'100%',borderCollapse:'collapse' }}>
+            <thead><tr>{['SI','Holiday Name','Date','Day','Type','Actions'].map(h=><th key={h} style={{ padding:'8px 12px',fontSize:10.5,fontWeight:700,letterSpacing:0.8,textTransform:'uppercase',color:'var(--grey-text)',textAlign:'left',background:'var(--grey-bg)',borderBottom:'1.5px solid var(--grey-border)' }}>{h}</th>)}</tr></thead>
+            <tbody>
+              {newRow && (
+                <tr>
+                  <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)' }}>—</td>
+                  <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)' }}><input value={newRow.name} onChange={e=>setNewRow({...newRow,name:e.target.value})} placeholder="Holiday name" style={{ width:'100%',height:30,border:'1px solid var(--grey-border)',borderRadius:5,padding:'0 8px',fontSize:12 }}/></td>
+                  <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)' }}><input type="date" value={newRow.date} onChange={e=>setNewRow({...newRow,date:e.target.value})} style={{ height:30,border:'1px solid var(--grey-border)',borderRadius:5,fontSize:12 }}/></td>
+                  <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)',fontSize:12,color:'var(--grey-text)' }}>{newRow.date ? DAY_NAMES[new Date(newRow.date).getDay()] : '—'}</td>
+                  <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)' }}><select value={newRow.holiday_type} onChange={e=>setNewRow({...newRow,holiday_type:e.target.value})} style={{ height:30,border:'1px solid var(--grey-border)',borderRadius:5,fontSize:12 }}><option>Public</option><option>Company</option><option>Optional</option></select></td>
+                  <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)' }}>
+                    <div style={{ display:'flex',gap:4 }}>
+                      <button onClick={()=>createHoliday.mutate(newRow)} disabled={!newRow.name||!newRow.date} style={{ padding:'4px 10px',background:'var(--green)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer' }}>Save</button>
+                      <button onClick={()=>setNewRow(null)} style={{ padding:'4px 10px',background:'var(--grey-border)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer' }}>Cancel</button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {holidays.map((h,idx) => (
+                <tr key={h.id} style={{ background: HOLIDAY_TYPE_BG[h.holiday_type] || 'white', textDecoration: h.is_active ? 'none' : 'line-through', opacity: h.is_active ? 1 : 0.55 }}>
+                  <td style={{ padding:'8px 12px',fontSize:12,color:'var(--grey-text)',borderBottom:'1px solid var(--grey-bg)' }}>{idx+1}</td>
+                  <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}><input defaultValue={h.name} onBlur={e=>{ if(e.target.value!==h.name) updateHoliday.mutate({id:h.id,name:e.target.value}); }} style={{ width:'100%',border:'1px solid transparent',borderRadius:5,padding:'4px 6px',fontSize:13,fontWeight:700,color:'var(--navy)',background:'transparent' }}/></td>
+                  <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}><input type="date" defaultValue={h.date?.slice(0,10)} onBlur={e=>{ if(e.target.value!==h.date?.slice(0,10)) updateHoliday.mutate({id:h.id,date:e.target.value}); }} style={{ border:'1px solid transparent',borderRadius:5,fontSize:12,background:'transparent' }}/></td>
+                  <td style={{ padding:'8px 12px',fontSize:12,color:'var(--grey-text)',borderBottom:'1px solid var(--grey-bg)' }}>{h.date ? DAY_NAMES[new Date(h.date).getDay()] : ''}</td>
+                  <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}><span style={{ fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:10,background:HOLIDAY_TYPE_BG[h.holiday_type],color:HOLIDAY_TYPE_COLORS[h.holiday_type] }}>{h.holiday_type}</span></td>
+                  <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}>
+                    <div style={{ display:'flex',gap:4 }}>
+                      <button onClick={()=>updateHoliday.mutate({id:h.id,is_active:!h.is_active})} style={{ padding:'3px 8px',fontSize:11,border:'none',borderRadius:4,cursor:'pointer',background:h.is_active?'rgba(10,122,121,0.08)':'rgba(184,106,0,0.08)',color:h.is_active?'var(--green)':'var(--amber)' }}>{h.is_active?'Active':'Inactive'}</button>
+                      <button onClick={()=>deleteHoliday.mutate(h.id)} style={{ padding:'3px 8px',fontSize:11,background:'rgba(232,35,42,0.08)',color:'var(--red)',border:'none',borderRadius:4,cursor:'pointer' }}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {holidays.length===0 && !newRow && <tr><td colSpan={6} style={{ padding:30,textAlign:'center',color:'var(--grey-text)',fontSize:13 }}>No holidays for {year}. Add holidays or import from Excel.</td></tr>}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AuditPanel() {
   const { data: logs=[], isLoading } = useQuery({ queryKey:['audit'], queryFn:()=>api.get('/admin/audit-log').then(r=>r.data) });
   return (
@@ -236,10 +433,12 @@ export default function AdminPage() {
       <div style={{ flex:1, overflow:'auto' }}>
         {section==='users'      && <UsersPanel/>}
         {section==='security'   && <SecurityPanel/>}
+        {section==='lop-sections' && <LopSectionsPanel/>}
+        {section==='holidays'   && <HolidayPanel/>}
         {section==='visibility' && <VisibilityPanel/>}
         {section==='audit'      && <AuditPanel/>}
         {section==='sysinfo'    && <SysInfoPanel/>}
-        {!['users','security','visibility','audit','sysinfo'].includes(section) && (
+        {!['users','security','lop-sections','holidays','visibility','audit','sysinfo'].includes(section) && (
           <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)',fontSize:14 }}>
             {ADMIN_SECTIONS.find(s=>s.key===section)?.label} — available in full deployment.
           </div>
