@@ -12,19 +12,11 @@ const NAV = [
   { to: '/resources', label: 'Resources',  icon: '👥' },
 ];
 
-function isItWorkspace(ws) {
-  if (!ws) return false;
-  const slug = (ws.slug || '').toLowerCase();
-  const name = (ws.name || '').toLowerCase();
-  return slug === 'it' || name === 'it' || name === 'it department' || name === 'it division';
-}
-
 export default function AppShell() {
   const { user, workspace, workspaces, selectWorkspace, logout } = useAuthStore();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const isAdmin = user?.roles?.includes('admin');
-  const showAdminPanel = isAdmin && isItWorkspace(workspace);
+  const isAdminOrSuper = user?.roles?.some(r => r === 'admin' || r === 'super_user');
 
   // User dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -204,8 +196,8 @@ export default function AppShell() {
               </NavLink>
             ))}
 
-            {/* Admin Panel — only in IT workspace */}
-            {showAdminPanel && (
+            {/* Admin Panel — visible to admin / super_user in any workspace */}
+            {isAdminOrSuper && (
               <NavLink to="/admin" style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 10px', borderRadius: 7, marginTop: 16,
@@ -220,8 +212,8 @@ export default function AppShell() {
               </NavLink>
             )}
 
-            {/* Settings — in non-IT workspaces */}
-            {!showAdminPanel && (
+            {/* Settings — visible to non-admin users */}
+            {!isAdminOrSuper && (
               <NavLink to="/settings" style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 10px', borderRadius: 7, marginTop: 16,
