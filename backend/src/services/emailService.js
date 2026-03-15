@@ -1,34 +1,39 @@
-const nodemailer = require('nodemailer');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 const logger = require('../config/logger');
 
-let _transporter = null;
+let _client = null;
 
-function getTransporter() {
-  if (!_transporter) {
-    _transporter = nodemailer.createTransport({
-      host:   process.env.SMTP_HOST,
-      port:   parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_PORT === '465',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+function getClient() {
+  if (!_client) {
+    _client = new SESClient({
+      region: process.env.AWS_REGION || 'ap-south-1',
+      credentials: {
+        accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       },
     });
   }
-  return _transporter;
+  return _client;
 }
 
 async function sendEmail({ to, subject, html, text }) {
-  const transporter = getTransporter();
-  const info = await transporter.sendMail({
-    from: process.env.SMTP_FROM || 'PRANITRA PM <noreply@pranitra.com>',
-    to,
-    subject,
-    html,
-    text,
-  });
-  logger.info(`Email sent: ${info.messageId} → ${to}`);
-  return info;
+  const client = getClient();
+  const params = {
+    Source: process.env.AWS_SES_FROM || 'PRANITRA ERP <admin@pranitra.com>',
+    Destination: {
+      ToAddresses: Array.isArray(to) ? to : [to],
+    },
+    Message: {
+      Subject: { Data: subject, Charset: 'UTF-8' },
+      Body: {},
+    },
+  };
+  if (html) params.Message.Body.Html = { Data: html, Charset: 'UTF-8' };
+  if (text) params.Message.Body.Text = { Data: text, Charset: 'UTF-8' };
+
+  const result = await client.send(new SendEmailCommand(params));
+  logger.info(`Email sent: ${result.MessageId} → ${to}`);
+  return result;
 }
 
 // ── OTP Email ─────────────────────────────────────────────────────
