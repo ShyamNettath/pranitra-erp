@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(grep -r \"export.*csv\\\\|export.*xlsx\\\\|import.*csv\\\\|import.*xlsx\" /c/ERP/pranitra --include=*.js --include=*.jsx)",
-      "Bash(cd /c/ERP/pranitra/backend && npm install)"
+      "Bash(cd /c/ERP/pranitra/backend && npm install)",
+      "Bash(npm install:*)"
     ]
   }
 }

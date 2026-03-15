@@ -41,15 +41,20 @@ exports.login = async (req, res, next) => {
     const otpSetting = await db('system_settings').where({ key: 'otp_enabled' }).first();
     const otpEnabled = otpSetting?.value === 'true';
  
+    // If user has TOTP enabled, require MFA verification before issuing tokens
+    if (user.totp_enabled) {
+      return res.json({ step: 'mfa', requiresMfa: true, userId: user.id });
+    }
+
     if (!otpEnabled) {
       const workspaces = await db('workspace_members as wm')
         .join('workspaces as w', 'w.id', 'wm.workspace_id')
         .where({ 'wm.user_id': user.id, 'wm.is_active': true, 'w.is_active': true })
         .select('w.id', 'w.name', 'w.slug', 'w.color');
- 
+
       const accessToken = makeAccessToken(user.id, roles, null);
       const refreshToken = makeRefreshToken(user.id);
- 
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
       await db('refresh_tokens').insert({
@@ -59,15 +64,15 @@ exports.login = async (req, res, next) => {
         revoked: false,
         device_info: req.headers['user-agent'] || null,
       });
- 
+
       await db('users').where({ id: user.id }).update({ last_login: new Date() });
       await writeAuditLog(user.id, 'auth.login', 'user', user.id, { email }, req);
- 
+
       return res.json({
         step: 'complete',
         access_token: accessToken,
         refresh_token: refreshToken,
-        user: { id: user.id, name: user.name, email: user.email, roles },
+        user: { id: user.id, name: user.name, email: user.email, roles, must_reset_password: !!user.must_reset_password },
         workspaces,
       });
     }
@@ -111,7 +116,7 @@ exports.verifyOtp = async (req, res, next) => {
     await db('refresh_tokens').insert({ user_id, token: refreshToken, expires_at: expiresAt, revoked: false, device_info: req.headers['user-agent'] || null });
     await writeAuditLog(user_id, 'auth.login', 'user', user_id, {}, req);
  
-    return res.json({ step: 'complete', access_token: accessToken, refresh_token: refreshToken, user: { id: user.id, name: user.name, email: user.email, roles }, workspaces });
+    return res.json({ step: 'complete', access_token: accessToken, refresh_token: refreshToken, user: { id: user.id, name: user.name, email: user.email, roles, must_reset_password: !!user.must_reset_password }, workspaces });
   } catch (err) { next(err); }
 };
  
@@ -177,7 +182,8 @@ exports.me = async (req, res) => {
     .where({ 'wm.user_id': userId, 'wm.is_active': true, 'w.is_active': true })
     .select('w.id', 'w.name', 'w.slug', 'w.color');
   delete user.password_hash;
-  return res.json({ ...user, roles, workspaces });
+  delete user.totp_secret;
+  return res.json({ ...user, roles, workspaces, must_reset_password: !!user.must_reset_password });
 };
  
 exports.forgotPassword = async (req, res) => res.json({ ok: true });

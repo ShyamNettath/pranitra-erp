@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import useAuthStore from '@/store/authStore';
+import api from '@/services/api';
 
 const NAV = [
   { to: '/',          label: 'Dashboard',  icon: '⊞' },
@@ -16,6 +17,49 @@ export default function AppShell() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isAdmin = user?.roles?.includes('admin');
+
+  // User dropdown
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Change password modal
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    setPwError('');
+    if (pwForm.newPw.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
+    if (pwForm.newPw !== pwForm.confirm) { setPwError('Passwords do not match.'); return; }
+    setPwLoading(true);
+    try {
+      await api.put('/users/me/password', { current_password: pwForm.current, new_password: pwForm.newPw });
+      setPwSuccess(true);
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPwForm({ current: '', newPw: '', confirm: '' });
+        setPwSuccess(false);
+        logout().then(() => navigate('/login'));
+      }, 2000);
+    } catch (err) {
+      setPwError(err.response?.data?.error || 'Password change failed.');
+    } finally {
+      setPwLoading(false);
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -71,24 +115,70 @@ export default function AppShell() {
             ))}
           </select>
 
-          {/* User */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: '5px 10px 5px 6px',
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
-            cursor: 'pointer',
-          }} onClick={() => logout().then(() => navigate('/login'))}>
+          {/* User dropdown */}
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
             <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--red)', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white',
-            }}>
-              {user?.name?.slice(0, 2).toUpperCase()}
+              display: 'flex', alignItems: 'center', gap: 9,
+              padding: '5px 10px 5px 6px',
+              background: dropdownOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+              cursor: 'pointer',
+            }} onClick={() => setDropdownOpen(!dropdownOpen)}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'var(--red)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white',
+              }}>
+                {user?.name?.slice(0, 2).toUpperCase()}
+              </div>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
+                {user?.name}
+              </span>
             </div>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
-              {user?.name}
-            </span>
+
+            {dropdownOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 6,
+                width: 240, background: 'white', borderRadius: 10,
+                border: '1px solid var(--grey-border)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                overflow: 'hidden', zIndex: 200,
+              }}>
+                {/* User info */}
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--grey-border)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--grey-text)' }}>{user?.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--grey-text)', marginTop: 2 }}>{user?.email}</div>
+                </div>
+
+                {/* Menu items */}
+                <div style={{ padding: '6px 0' }}>
+                  <button
+                    onClick={() => { setDropdownOpen(false); setShowPasswordModal(true); }}
+                    style={{
+                      width: '100%', padding: '10px 16px', background: 'none', border: 'none',
+                      fontFamily: 'var(--font)', fontSize: 13, color: 'var(--navy)',
+                      cursor: 'pointer', textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = 'var(--grey-bg)'}
+                    onMouseLeave={(e) => e.target.style.background = 'none'}
+                  >
+                    Change Password
+                  </button>
+                  <button
+                    onClick={() => { setDropdownOpen(false); logout().then(() => navigate('/login')); }}
+                    style={{
+                      width: '100%', padding: '10px 16px', background: 'none', border: 'none',
+                      fontFamily: 'var(--font)', fontSize: 13, color: 'var(--red)', fontWeight: 700,
+                      cursor: 'pointer', textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = 'var(--grey-bg)'}
+                    onMouseLeave={(e) => e.target.style.background = 'none'}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -157,6 +247,58 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
+
+      {/* ── Change Password Modal ──────────────────────── */}
+      {showPasswordModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300,
+        }} onClick={() => { setShowPasswordModal(false); setPwError(''); setPwSuccess(false); setPwForm({ current: '', newPw: '', confirm: '' }); }}>
+          <div style={{
+            background: 'white', borderRadius: 12, padding: 28, width: 400,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--navy)', marginBottom: 20 }}>Change Password</h3>
+
+            {pwSuccess ? (
+              <div style={{ padding: '16px 20px', background: 'rgba(10,122,121,0.08)', border: '1px solid rgba(10,122,121,0.2)', borderRadius: 8, fontSize: 14, fontWeight: 700, color: 'var(--green)', textAlign: 'center' }}>
+                Password changed successfully. Signing out…
+              </div>
+            ) : (
+              <form onSubmit={handleChangePassword}>
+                {[
+                  { key: 'current', label: 'Current Password', placeholder: 'Enter current password' },
+                  { key: 'newPw', label: 'New Password', placeholder: 'Minimum 8 characters' },
+                  { key: 'confirm', label: 'Confirm New Password', placeholder: 'Re-enter new password' },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key} style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--grey-text)', marginBottom: 6 }}>{label}</label>
+                    <input
+                      type="password" required value={pwForm[key]}
+                      onChange={(e) => setPwForm({ ...pwForm, [key]: e.target.value })}
+                      placeholder={placeholder}
+                      style={{ width: '100%', height: 40, border: '1.5px solid var(--grey-border)', borderRadius: 7, padding: '0 12px', fontFamily: 'var(--font)', fontSize: 13, color: 'var(--navy)', outline: 'none' }}
+                    />
+                  </div>
+                ))}
+
+                {pwError && (
+                  <div style={{ padding: '10px 14px', background: 'rgba(232,35,42,0.08)', border: '1px solid rgba(232,35,42,0.2)', borderRadius: 7, marginBottom: 14, fontSize: 13, color: 'var(--red)' }}>
+                    {pwError}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => { setShowPasswordModal(false); setPwError(''); setPwForm({ current: '', newPw: '', confirm: '' }); }} style={{ padding: '8px 16px', background: 'white', border: '1.5px solid var(--grey-border)', borderRadius: 7, fontFamily: 'var(--font)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={pwLoading} style={{ padding: '8px 16px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700, cursor: pwLoading ? 'not-allowed' : 'pointer' }}>
+                    {pwLoading ? 'Saving…' : 'Change Password'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

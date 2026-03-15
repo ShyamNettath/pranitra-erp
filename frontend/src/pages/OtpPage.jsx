@@ -46,7 +46,9 @@ export default function OtpPage() {
     setError('');
     try {
       const data = await verifyOtp(pendingUserId, otp);
-      if (data.workspaces.length === 1) {
+      if (data.user?.must_reset_password) {
+        navigate('/force-reset-password');
+      } else if (data.workspaces.length === 1) {
         const { selectWorkspace } = useAuthStore.getState();
         await selectWorkspace(data.workspaces[0].id);
         navigate('/');

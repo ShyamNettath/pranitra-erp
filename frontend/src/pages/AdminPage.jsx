@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
 import useAuthStore from '@/store/authStore';
@@ -11,6 +12,7 @@ const ADMIN_SECTIONS = [
   { key:'complexity', label:'Complexity Settings',   group:'Project Config' },
   { key:'lop-sections', label:'LOP Sections', group:'Project Config' },
   { key:'holidays',   label:'Holiday List',          group:'Project Config' },
+  { key:'branding',   label:'Branding',              group:'System' },
   { key:'visibility', label:'Report Visibility',     group:'System' },
   { key:'security',   label:'Session & Security',    group:'System' },
   { key:'recycle',    label:'Recycle Bin',           group:'System' },
@@ -36,7 +38,7 @@ function UsersPanel() {
   const { data: users=[], isLoading } = useQuery({ queryKey:['admin-users'], queryFn:()=>api.get('/users').then(r=>r.data) });
   const [showCreate, setShowCreate] = useState(false);
   const qc = useQueryClient();
-  const [form, setForm] = useState({ email:'',name:'',password:'',job_title:'',roles:['team_member'] });
+  const [form, setForm] = useState({ email:'',name:'',job_title:'',roles:['team_member'] });
   const create = useMutation({ mutationFn:data=>api.post('/users',data).then(r=>r.data), onSuccess:()=>{ qc.invalidateQueries(['admin-users']); setShowCreate(false); } });
   const deactivate = useMutation({ mutationFn:id=>api.post(`/users/${id}/deactivate`), onSuccess:()=>qc.invalidateQueries(['admin-users']) });
   const reactivate = useMutation({ mutationFn:id=>api.post(`/users/${id}/reactivate`), onSuccess:()=>qc.invalidateQueries(['admin-users']) });
@@ -51,7 +53,7 @@ function UsersPanel() {
         <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:18,marginBottom:16 }}>
           <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)',marginBottom:12 }}>New User</div>
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10 }}>
-            {[['email','Email *','email'],['name','Full Name *','text'],['password','Password *','password'],['job_title','Job Title','text']].map(([k,l,t])=>(
+            {[['email','Email *','email'],['name','Full Name *','text'],['job_title','Job Title','text']].map(([k,l,t])=>(
               <div key={k}><label style={{ display:'block',fontSize:11,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)',marginBottom:4 }}>{l}</label>
               <input type={t} value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%',height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontFamily:'var(--font)',fontSize:13,color:'var(--navy)',background:'var(--grey-bg)',outline:'none' }}/></div>
             ))}
@@ -64,7 +66,7 @@ function UsersPanel() {
           </div>
           <div style={{ display:'flex',gap:8 }}>
             <button onClick={()=>setShowCreate(false)} style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
-            <button onClick={()=>create.mutate(form)} disabled={create.isPending||!form.email||!form.name||!form.password} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{create.isPending?'Creating…':'Create'}</button>
+            <button onClick={()=>create.mutate(form)} disabled={create.isPending||!form.email||!form.name} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{create.isPending?'Creating…':'Create'}</button>
           </div>
         </div>
       )}
@@ -89,7 +91,117 @@ function UsersPanel() {
   );
 }
 
+function BrandingPanel() {
+  const qc = useQueryClient();
+  const { data: branding, isLoading } = useQuery({
+    queryKey: ['branding'],
+    queryFn: () => api.get('/settings/branding').then(r => r.data),
+  });
+  const [companyName, setCompanyName] = useState('');
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  useState(() => {
+    if (branding?.company_name) setCompanyName(branding.company_name);
+  });
+
+  // Sync companyName when branding loads
+  React.useEffect(() => {
+    if (branding?.company_name && !companyName) setCompanyName(branding.company_name);
+  }, [branding]);
+
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('File must be under 2MB'); return; }
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSuccess(false);
+    try {
+      const fd = new FormData();
+      if (logoFile) fd.append('logo', logoFile);
+      fd.append('company_name', companyName);
+      await api.post('/settings/branding', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      qc.invalidateQueries(['branding']);
+      setSuccess(true);
+      setLogoFile(null);
+      setLogoPreview(null);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (isLoading) return <div style={{ padding: 20, color: 'var(--grey-text)', fontSize: 13 }}>Loading…</div>;
+
+  const displayLogo = logoPreview || branding?.logo_url || null;
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--navy)', marginBottom: 16 }}>Branding</h2>
+      <div style={{ background: 'white', border: '1px solid var(--grey-border)', borderRadius: 10, padding: 24 }}>
+        {/* Logo upload */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--grey-text)', marginBottom: 10 }}>Company Logo</div>
+          <label style={{ cursor: 'pointer', display: 'block' }}>
+            <input type="file" accept="image/png,image/jpeg" onChange={handleFileSelect} style={{ display: 'none' }} />
+            {displayLogo ? (
+              <div style={{ width: 240, height: 160, border: '2px dashed var(--grey-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'var(--grey-bg)' }}>
+                <img src={displayLogo} alt="Logo preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              </div>
+            ) : (
+              <div style={{ width: 240, height: 160, border: '2px dashed var(--grey-border)', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--grey-bg)' }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#B0BAC8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--navy)' }}>Upload Company Logo</span>
+                <span style={{ fontSize: 11, color: 'var(--grey-text)' }}>PNG or JPG, max 2MB</span>
+              </div>
+            )}
+          </label>
+          {displayLogo && <div style={{ fontSize: 11, color: 'var(--grey-text)', marginTop: 6 }}>Click the image to replace</div>}
+        </div>
+
+        {/* Company name */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--grey-text)', marginBottom: 6 }}>Company Name</div>
+          <input
+            type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="Enter company name"
+            style={{ width: 320, height: 40, border: '1.5px solid var(--grey-border)', borderRadius: 7, padding: '0 12px', fontFamily: 'var(--font)', fontSize: 14, color: 'var(--navy)', outline: 'none' }}
+          />
+        </div>
+
+        {/* Save */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={handleSave} disabled={saving} style={{
+            padding: '8px 20px', background: 'var(--navy)', color: 'white', border: 'none',
+            borderRadius: 7, fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700,
+            cursor: saving ? 'not-allowed' : 'pointer',
+          }}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          {success && <span style={{ fontSize: 13, color: 'var(--green)', fontWeight: 700 }}>Saved successfully</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SecurityPanel() {
+  const navigate = useNavigate();
   const { data: settings=[], isLoading } = useQuery({ queryKey:['admin-settings'], queryFn:()=>api.get('/admin/settings').then(r=>r.data) });
   const qc = useQueryClient();
   const save = useMutation({ mutationFn:data=>api.put('/admin/settings',data), onSuccess:()=>qc.invalidateQueries(['admin-settings']) });
@@ -111,7 +223,10 @@ function SecurityPanel() {
       <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,overflow:'hidden' }}>
         <div style={{ padding:'10px 18px',borderBottom:'1px solid var(--grey-border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
           <span style={{ fontSize:13,fontWeight:700,color:'var(--navy)' }}>Security Settings</span>
-          <div style={{ display:'flex',alignItems:'center',gap:10,fontSize:12,color:'var(--green)',fontWeight:700 }}>🔒 2FA is mandatory — cannot be disabled</div>
+          <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+            <button onClick={()=>navigate('/mfa-setup')} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Set up Authenticator App</button>
+            <span style={{ fontSize:12,color:'var(--green)',fontWeight:700 }}>🔒 2FA is mandatory — cannot be disabled</span>
+          </div>
         </div>
         <div style={{ padding:'0 18px' }}>
           {ROWS.map(r=>(
@@ -432,13 +547,14 @@ export default function AdminPage() {
       {/* Content */}
       <div style={{ flex:1, overflow:'auto' }}>
         {section==='users'      && <UsersPanel/>}
+        {section==='branding'   && <BrandingPanel/>}
         {section==='security'   && <SecurityPanel/>}
         {section==='lop-sections' && <LopSectionsPanel/>}
         {section==='holidays'   && <HolidayPanel/>}
         {section==='visibility' && <VisibilityPanel/>}
         {section==='audit'      && <AuditPanel/>}
         {section==='sysinfo'    && <SysInfoPanel/>}
-        {!['users','security','lop-sections','holidays','visibility','audit','sysinfo'].includes(section) && (
+        {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo'].includes(section) && (
           <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)',fontSize:14 }}>
             {ADMIN_SECTIONS.find(s=>s.key===section)?.label} — available in full deployment.
           </div>

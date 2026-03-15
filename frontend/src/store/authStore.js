@@ -28,12 +28,34 @@ const useAuthStore = create((set, get) => ({
    });
    return data;
   }
+    // MFA (TOTP) required
+    if (data.requiresMfa) {
+      set({ loginStep: 'mfa', pendingUserId: data.userId, isLoading: false });
+      return data;
+    }
+
     // OTP is enabled — go to OTP step
     set({ loginStep: 'otp', pendingUserId: data.user_id, isLoading: false });
     return data;
   },
 
-  // Step 2 — verify OTP
+  // Step 2a — verify TOTP (Authenticator app)
+  verifyTotp: async (userId, token) => {
+    set({ isLoading: true });
+    const { data } = await api.post('/totp/verify', { userId, token });
+    localStorage.setItem('pranitra_access_token', data.access_token);
+    localStorage.setItem('pranitra_refresh_token', data.refresh_token);
+    set({
+      user:        data.user,
+      workspaces:  data.workspaces || [],
+      accessToken: data.access_token,
+      loginStep:   'workspace',
+      isLoading:   false,
+    });
+    return data;
+  },
+
+  // Step 2b — verify OTP
   verifyOtp: async (userId, otp) => {
     set({ isLoading: true });
     const { data } = await api.post('/auth/verify-otp', { user_id: userId, otp });

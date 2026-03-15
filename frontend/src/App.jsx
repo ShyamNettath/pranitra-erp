@@ -15,6 +15,9 @@ import GanttPage       from '@/pages/GanttPage';
 import ReportsPage     from '@/pages/ReportsPage';
 import ResourcesPage   from '@/pages/ResourcesPage';
 import AdminPage       from '@/pages/AdminPage';
+import MfaSetupPage    from '@/pages/MfaSetupPage';
+import MfaVerifyPage   from '@/pages/MfaVerifyPage';
+import ForceResetPasswordPage from '@/pages/ForceResetPasswordPage';
 import AppShell        from '@/components/layout/AppShell';
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } });
@@ -22,6 +25,12 @@ const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } 
 function RequireAuth({ children }) {
   const { user, accessToken } = useAuthStore();
   if (!accessToken || !user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function RequirePasswordReset({ children }) {
+  const { user } = useAuthStore();
+  if (user?.must_reset_password) return <Navigate to="/force-reset-password" replace />;
   return children;
 }
 
@@ -59,14 +68,18 @@ export default function App() {
           {/* Auth flow */}
           <Route path="/login"     element={<LoginPage />} />
           <Route path="/otp"       element={<OtpPage />} />
-          <Route path="/workspace" element={<RequireAuth><WorkspacePage /></RequireAuth>} />
+          <Route path="/mfa-verify" element={<MfaVerifyPage />} />
+          <Route path="/force-reset-password" element={<RequireAuth><ForceResetPasswordPage /></RequireAuth>} />
+          <Route path="/workspace" element={<RequireAuth><RequirePasswordReset><WorkspacePage /></RequirePasswordReset></RequireAuth>} />
 
           {/* App — requires auth + workspace */}
           <Route path="/" element={
             <RequireAuth>
-              <RequireWorkspace>
-                <AppShell />
-              </RequireWorkspace>
+              <RequirePasswordReset>
+                <RequireWorkspace>
+                  <AppShell />
+                </RequireWorkspace>
+              </RequirePasswordReset>
             </RequireAuth>
           }>
             <Route index                         element={<DashboardPage />} />
@@ -77,6 +90,7 @@ export default function App() {
             <Route path="reports"                element={<ReportsPage />} />
             <Route path="resources"              element={<ResourcesPage />} />
             <Route path="admin"                  element={<AdminPage />} />
+            <Route path="mfa-setup"              element={<MfaSetupPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

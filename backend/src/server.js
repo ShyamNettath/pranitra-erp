@@ -42,6 +42,8 @@ app.use('/api/resources',   require('./routes/resources'));
 app.use('/api/admin',       require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/categories',   require('./routes/categories'));
+app.use('/api/settings',     require('./routes/settings'));
+app.use('/api/totp',         require('./routes/totp'));
 app.use('/api', require('./routes/lop'));
 app.use('/api', require('./routes/holidays'));
 // ── 404 ───────────────────────────────────────────────────────────
