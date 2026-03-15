@@ -19,6 +19,7 @@ import AdminPage       from '@/pages/AdminPage';
 import MfaSetupPage    from '@/pages/MfaSetupPage';
 import MfaVerifyPage   from '@/pages/MfaVerifyPage';
 import ForceResetPasswordPage from '@/pages/ForceResetPasswordPage';
+import SettingsPage    from '@/pages/SettingsPage';
 import AppShell        from '@/components/layout/AppShell';
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } });
@@ -100,6 +101,7 @@ export default function App() {
             <Route path="reports"                element={<ReportsPage />} />
             <Route path="resources"              element={<ResourcesPage />} />
             <Route path="admin"                  element={<AdminPage />} />
+            <Route path="settings"               element={<SettingsPage />} />
             <Route path="mfa-setup"              element={<MfaSetupPage />} />
           </Route>
 

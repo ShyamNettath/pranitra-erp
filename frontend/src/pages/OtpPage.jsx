@@ -78,12 +78,12 @@ export default function OtpPage() {
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'var(--font)' }}>
       {/* Left panel */}
       <div style={{ width: '45%', background: 'var(--navy)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px' }}>
-        <div style={{ fontSize: 24, fontWeight: 700, color: 'white', marginBottom: 8 }}>PRANITRA PM</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: 'white', marginBottom: 8, letterSpacing: -0.5 }}>usaha</div>
         <div style={{ fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: 48 }}>INNOVATE. PARTNER. SUCCEED.</div>
         <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 24, marginBottom: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'white', marginBottom: 8 }}>🔒 Why OTP?</div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
-            PRANITRA PM enforces two-factor authentication for all users. This protects sensitive project data, financial information, and resource costing from unauthorised access.
+            usaha enforces two-factor authentication for all users. This protects sensitive project data, financial information, and resource costing from unauthorised access.
           </p>
         </div>
         <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 24 }}>

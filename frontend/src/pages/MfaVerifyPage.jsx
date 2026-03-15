@@ -36,7 +36,7 @@ export default function MfaVerifyPage() {
         flexDirection: 'column', justifyContent: 'center', padding: 48,
       }}>
         <div style={{ marginBottom: 48 }}>
-          <div style={{ fontSize: 24, fontWeight: 700, color: 'white', marginBottom: 8 }}>PRANITRA PM</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'white', marginBottom: 8, letterSpacing: -0.5 }}>usaha</div>
           <div style={{ fontSize: 11, letterSpacing: 2, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
             INNOVATE. PARTNER. SUCCEED.
           </div>
