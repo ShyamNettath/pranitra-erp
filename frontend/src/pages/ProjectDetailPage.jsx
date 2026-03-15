@@ -78,6 +78,8 @@ export default function ProjectDetailPage() {
     enabled: !!project && tab === 'LOP',
   });
 
+  if (isLoading || !project) return <div style={{ padding:28,color:'var(--grey-text)' }}>Loading…</div>;
+
   return (
     <div style={{ padding:28 }}>
       {/* Header */}
