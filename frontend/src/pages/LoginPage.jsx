@@ -10,10 +10,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [error, setError] = useState('');
-  const [branding, setBranding] = useState({ logo_url: null, company_name: null });
+  const [branding, setBranding] = useState({ logo_url: null, company_name: null, primary_color: null });
 
   useEffect(() => {
-    axios.get('/api/settings/branding').then(r => setBranding(r.data)).catch(() => {});
+    axios.get('/api/settings/branding').then(r => {
+      setBranding(r.data);
+      if (r.data.primary_color) {
+        document.documentElement.style.setProperty('--primary-color', r.data.primary_color);
+      }
+    }).catch(() => {});
   }, []);
 
   async function handleSubmit(e) {
@@ -40,8 +45,8 @@ export default function LoginPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'var(--font)', background: '#FFFFFF' }}>
       {/* Tool name top left */}
-      <div style={{ padding: '24px 0 0 40px' }}>
-        <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)', letterSpacing: -0.5 }}>usaha</span>
+      <div style={{ padding: '32px 0 0 48px' }}>
+        <span style={{ fontSize: 36, fontWeight: 800, color: branding.primary_color || 'var(--primary-color)', letterSpacing: -0.5 }}>usaha</span>
       </div>
 
       {/* Main content */}
@@ -56,11 +61,11 @@ export default function LoginPage() {
             <img
               src={branding.logo_url}
               alt="Company Logo"
-              style={{ maxWidth: 220, maxHeight: 160, objectFit: 'contain', marginBottom: 20 }}
+              style={{ maxWidth: 280, maxHeight: 220, objectFit: 'contain', marginBottom: 20 }}
             />
           ) : (
             <div style={{
-              width: 200, height: 140, border: '2px dashed #D8DDE6', borderRadius: 12,
+              width: 200, height: 160, border: '2px dashed #D8DDE6', borderRadius: 12,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: 20, color: '#B0BAC8', fontSize: 13,
             }}>

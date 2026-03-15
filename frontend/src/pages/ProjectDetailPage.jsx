@@ -10,9 +10,9 @@ const SL = { active:'Active',pending_approval:'Pending Approval',draft:'Draft',o
 
 function Stat({ label, value }) {
   return (
-    <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:8,padding:'12px 14px' }}>
-      <div style={{ fontSize:10,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)',marginBottom:5 }}>{label}</div>
-      <div style={{ fontSize:16,fontWeight:700,color:'var(--navy)' }}>{value}</div>
+    <div style={{ textAlign:'center' }}>
+      <div style={{ fontSize:9,fontWeight:700,letterSpacing:0.8,textTransform:'uppercase',color:'var(--grey-text)',marginBottom:2 }}>{label}</div>
+      <div style={{ fontSize:13,fontWeight:700,color:'var(--navy)' }}>{value}</div>
     </div>
   );
 }
@@ -81,39 +81,43 @@ export default function ProjectDetailPage() {
   if (isLoading || !project) return <div style={{ padding:28,color:'var(--grey-text)' }}>Loading…</div>;
 
   return (
-    <div style={{ padding:28 }}>
+    <div style={{ padding:'16px 24px' }}>
       {/* Header */}
-      <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20 }}>
+      <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8 }}>
         <div>
-          <button onClick={()=>navigate('/projects')} style={{ background:'none',border:'none',color:'var(--grey-text)',cursor:'pointer',fontSize:13,marginBottom:6 }}>← Projects</button>
+          <button onClick={()=>navigate('/projects')} style={{ background:'none',border:'none',color:'var(--grey-text)',cursor:'pointer',fontSize:13,marginBottom:4 }}>← Projects</button>
           <div style={{ display:'flex',alignItems:'center',gap:10 }}>
             <div style={{ width:12,height:12,borderRadius:'50%',background:project.color||'var(--navy)' }}/>
-            <h1 style={{ fontSize:20,fontWeight:700,color:'var(--navy)' }}>{project.name}</h1>
-            <span style={{ padding:'2px 10px',borderRadius:20,fontSize:12,fontWeight:700,background:`${SC[project.status]||'#B0BAC8'}22`,color:SC[project.status]||'#B0BAC8' }}>{SL[project.status]||project.status}</span>
+            <h1 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',margin:0 }}>{project.name}</h1>
+            <span style={{ padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:`${SC[project.status]||'#B0BAC8'}22`,color:SC[project.status]||'#B0BAC8' }}>{SL[project.status]||project.status}</span>
           </div>
-          {project.description&&<p style={{ fontSize:13,color:'var(--grey-text)',marginTop:4 }}>{project.description}</p>}
+          {project.description&&<p style={{ fontSize:12,color:'var(--grey-text)',marginTop:2,marginBottom:0 }}>{project.description}</p>}
         </div>
-        <div style={{ display:'flex',gap:8 }}>
-          {isPM&&['draft','changes_requested'].includes(project.status)&&<button onClick={()=>submitMut.mutate()} style={{ padding:'7px 14px',background:'var(--amber)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Submit for Approval</button>}
+        <div style={{ display:'flex',gap:6 }}>
+          {isPM&&['draft','changes_requested'].includes(project.status)&&<button onClick={()=>submitMut.mutate()} style={{ padding:'5px 12px',background:'var(--amber)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:11,fontWeight:700,cursor:'pointer' }}>Submit for Approval</button>}
           {isDir&&project.status==='pending_approval'&&<>
-            <button onClick={()=>setModal('approve')} style={{ padding:'7px 14px',background:'var(--green)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Approve</button>
-            <button onClick={()=>setModal('request-changes')} style={{ padding:'7px 14px',background:'var(--amber)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Request Changes</button>
-            <button onClick={()=>setModal('reject')} style={{ padding:'7px 14px',background:'var(--red)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Reject</button>
+            <button onClick={()=>setModal('approve')} style={{ padding:'5px 12px',background:'var(--green)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:11,fontWeight:700,cursor:'pointer' }}>Approve</button>
+            <button onClick={()=>setModal('request-changes')} style={{ padding:'5px 12px',background:'var(--amber)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:11,fontWeight:700,cursor:'pointer' }}>Request Changes</button>
+            <button onClick={()=>setModal('reject')} style={{ padding:'5px 12px',background:'var(--red)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:11,fontWeight:700,cursor:'pointer' }}>Reject</button>
           </>}
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20 }}>
-        <Stat label="Baseline Hours" value={`${parseFloat(project.baseline_hours||0).toFixed(0)}h`}/>
-        <Stat label="Actual Hours" value={`${parseFloat(project.actual_hours||0).toFixed(0)}h`}/>
+      {/* Stats strip */}
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',background:'white',border:'1px solid var(--grey-border)',borderRadius:6,padding:'6px 20px',marginBottom:8,height:42 }}>
+        <Stat label="Baseline" value={`${parseFloat(project.baseline_hours||0).toFixed(0)}h`}/>
+        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
+        <Stat label="Actual" value={`${parseFloat(project.actual_hours||0).toFixed(0)}h`}/>
+        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
         <Stat label="Budget" value={project.budget?`€${Number(project.budget).toLocaleString('en-GB')}`:'—'}/>
+        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
         <Stat label="Start" value={project.start_date?new Date(project.start_date).toLocaleDateString('en-GB'):'—'}/>
+        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
         <Stat label="End" value={project.end_date?new Date(project.end_date).toLocaleDateString('en-GB'):'—'}/>
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex',gap:2,borderBottom:'2px solid var(--grey-border)',marginBottom:20 }}>
+      <div style={{ display:'flex',gap:2,borderBottom:'2px solid var(--grey-border)',marginBottom:10 }}>
         {TABS.map(t=><button key={t} onClick={()=>setTab(t)} style={{ padding:'8px 16px',background:'none',border:'none',borderBottom:tab===t?'2px solid var(--navy)':'2px solid transparent',marginBottom:-2,fontFamily:'var(--font)',fontSize:13,fontWeight:tab===t?700:400,color:tab===t?'var(--navy)':'var(--grey-text)',cursor:'pointer' }}>{t}</button>)}
       </div>
 

@@ -1,6 +1,7 @@
 /* PRANITRA Brand Tokens */
 :root {
-  --navy:        #003264;
+  --primary-color: #003264;
+  --navy:        var(--primary-color);
   --navy-light:  #004080;
   --navy-xlight: #E8EEF6;
   --red:         #E8232A;

@@ -30,17 +30,19 @@ router.get('/branding', async (_req, res, next) => {
   try {
     const logoRow = await db('system_settings').where({ key: 'branding_logo' }).first();
     const nameRow = await db('system_settings').where({ key: 'branding_company_name' }).first();
+    const colorRow = await db('system_settings').where({ key: 'branding_primary_color' }).first();
     return res.json({
       logo_url: logoRow?.value || null,
       company_name: nameRow?.value || null,
+      primary_color: colorRow?.value || '#003264',
     });
   } catch (err) { next(err); }
 });
 
-// POST /api/settings/branding — admin only
-router.post('/branding', authenticate, requireRole('admin'), upload.single('logo'), async (req, res, next) => {
+// POST /api/settings/branding — admin or super_user only
+router.post('/branding', authenticate, requireRole('admin', 'super_user'), upload.single('logo'), async (req, res, next) => {
   try {
-    const { company_name } = req.body;
+    const { company_name, primary_color } = req.body;
 
     if (req.file) {
       const logoUrl = `/uploads/branding/${req.file.filename}`;
@@ -61,12 +63,23 @@ router.post('/branding', authenticate, requireRole('admin'), upload.single('logo
       }
     }
 
+    if (primary_color !== undefined) {
+      const existing = await db('system_settings').where({ key: 'branding_primary_color' }).first();
+      if (existing) {
+        await db('system_settings').where({ key: 'branding_primary_color' }).update({ value: primary_color });
+      } else {
+        await db('system_settings').insert({ key: 'branding_primary_color', value: primary_color });
+      }
+    }
+
     const logoRow = await db('system_settings').where({ key: 'branding_logo' }).first();
     const nameRow = await db('system_settings').where({ key: 'branding_company_name' }).first();
+    const colorRow = await db('system_settings').where({ key: 'branding_primary_color' }).first();
     return res.json({
       ok: true,
       logo_url: logoRow?.value || null,
       company_name: nameRow?.value || null,
+      primary_color: colorRow?.value || '#003264',
     });
   } catch (err) { next(err); }
 });

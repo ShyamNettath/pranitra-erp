@@ -98,6 +98,7 @@ function BrandingPanel() {
     queryFn: () => api.get('/settings/branding').then(r => r.data),
   });
   const [companyName, setCompanyName] = useState('');
+  const [primaryColor, setPrimaryColor] = useState('#003264');
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -107,9 +108,10 @@ function BrandingPanel() {
     if (branding?.company_name) setCompanyName(branding.company_name);
   });
 
-  // Sync companyName when branding loads
+  // Sync fields when branding loads
   React.useEffect(() => {
     if (branding?.company_name && !companyName) setCompanyName(branding.company_name);
+    if (branding?.primary_color) setPrimaryColor(branding.primary_color);
   }, [branding]);
 
   function handleFileSelect(e) {
@@ -129,7 +131,9 @@ function BrandingPanel() {
       const fd = new FormData();
       if (logoFile) fd.append('logo', logoFile);
       fd.append('company_name', companyName);
+      fd.append('primary_color', primaryColor);
       await api.post('/settings/branding', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      document.documentElement.style.setProperty('--primary-color', primaryColor);
       qc.invalidateQueries(['branding']);
       setSuccess(true);
       setLogoFile(null);
@@ -182,6 +186,20 @@ function BrandingPanel() {
             placeholder="Enter company name"
             style={{ width: 320, height: 40, border: '1.5px solid var(--grey-border)', borderRadius: 7, padding: '0 12px', fontFamily: 'var(--font)', fontSize: 14, color: 'var(--navy)', outline: 'none' }}
           />
+        </div>
+
+        {/* Primary colour */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--grey-text)', marginBottom: 6 }}>Primary Colour</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input
+              type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)}
+              style={{ width: 48, height: 40, border: '1.5px solid var(--grey-border)', borderRadius: 7, padding: 2, cursor: 'pointer', background: 'white' }}
+            />
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)', fontFamily: 'monospace' }}>{primaryColor.toUpperCase()}</span>
+            <button onClick={() => setPrimaryColor('#003264')} style={{ padding: '4px 10px', background: 'var(--grey-bg)', border: '1px solid var(--grey-border)', borderRadius: 5, fontFamily: 'var(--font)', fontSize: 11, cursor: 'pointer', color: 'var(--grey-text)' }}>Reset</button>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--grey-text)', marginTop: 6 }}>This colour applies to the navbar, buttons, headings, and active states across the app.</div>
         </div>
 
         {/* Save */}

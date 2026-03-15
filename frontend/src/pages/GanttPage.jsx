@@ -147,7 +147,7 @@ export default function GanttPage() {
               const endX = LABEL_W + daysBetween(minDate, new Date(item.due_date)) * CELL_W + CELL_W;
               const barW = Math.max(8, endX - startX);
               const isMilestone = item._type === 'milestone';
-              const barColor = isMilestone ? '#5A2D8A' : (STATUS_COLORS[item.status] || '#003264');
+              const barColor = isMilestone ? '#5A2D8A' : (STATUS_COLORS[item.status] || 'var(--navy)');
               const pct = parseFloat(item.progress_pct || 0);
 
               // Baseline bar

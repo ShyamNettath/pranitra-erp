@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import axios from 'axios';
 import '@/styles/globals.css';
 
 import useAuthStore from '@/store/authStore';
@@ -46,6 +47,15 @@ export default function App() {
   useEffect(() => {
     if (accessToken && !user) loadMe();
   }, [accessToken]);
+
+  // Fetch branding and apply primary color globally
+  useEffect(() => {
+    axios.get('/api/settings/branding').then(r => {
+      if (r.data.primary_color) {
+        document.documentElement.style.setProperty('--primary-color', r.data.primary_color);
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onBlur = (e) => {
