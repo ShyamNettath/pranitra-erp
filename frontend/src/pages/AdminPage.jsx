@@ -34,54 +34,255 @@ function Toggle({ on, onChange }) {
   );
 }
 
+const LOCATIONS_ALL = ['Bangalore', 'Gulbarga', 'Coimbatore'];
+const TEAMS_ALL = ['Design', 'Simulation', 'Planning', 'Layout', 'Project Management', 'Human Resources', 'Accounts', 'IT', 'Facilities & Admin'];
+
+const uLabelStyle = { display:'block',fontSize:11,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)',marginBottom:4 };
+const uInputStyle = { width:'100%',height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontFamily:'var(--font)',fontSize:13,color:'var(--navy)',background:'var(--grey-bg)',outline:'none' };
+
+function UserFormFields({ form, setForm }) {
+  return (
+    <>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10 }}>
+        <div><label style={uLabelStyle}>Employee ID</label><input value={form.employee_id||''} onChange={e=>setForm({...form,employee_id:e.target.value})} style={uInputStyle} placeholder="e.g. EMP001"/></div>
+        <div><label style={uLabelStyle}>Full Name *</label><input value={form.name||''} onChange={e=>setForm({...form,name:e.target.value})} style={uInputStyle}/></div>
+        <div><label style={uLabelStyle}>Email *</label><input type="email" value={form.email||''} onChange={e=>setForm({...form,email:e.target.value})} style={uInputStyle}/></div>
+        <div><label style={uLabelStyle}>Designation</label><input value={form.designation||''} onChange={e=>setForm({...form,designation:e.target.value})} style={uInputStyle}/></div>
+        <div><label style={uLabelStyle}>Location</label>
+          <select value={form.location||''} onChange={e=>setForm({...form,location:e.target.value})} style={uInputStyle}>
+            <option value="">Select…</option>
+            {LOCATIONS_ALL.map(l=><option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
+        <div><label style={uLabelStyle}>Team</label>
+          <select value={form.team||''} onChange={e=>setForm({...form,team:e.target.value})} style={uInputStyle}>
+            <option value="">Select…</option>
+            {TEAMS_ALL.map(t=><option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div><label style={uLabelStyle}>Contact Number</label><input value={form.contact_number||''} onChange={e=>{ const v=e.target.value.replace(/[^0-9+\-\s]/g,'').slice(0,15); setForm({...form,contact_number:v}); }} style={uInputStyle} placeholder="Max 15 digits"/></div>
+      </div>
+      <div style={{ marginBottom:12 }}>
+        <label style={{ ...uLabelStyle,marginBottom:6 }}>Roles</label>
+        <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
+          {ROLES_ALL.map(r=><label key={r} style={{ display:'flex',alignItems:'center',gap:5,fontSize:12,cursor:'pointer' }}><input type="checkbox" checked={(form.roles||[]).includes(r)} onChange={e=>{const next=e.target.checked?[...(form.roles||[]),r]:(form.roles||[]).filter(x=>x!==r);setForm({...form,roles:next});}}/>{ROLE_LABELS[r]}</label>)}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function BulkUploadModal({ onClose }) {
+  const qc = useQueryClient();
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  async function handleDownloadTemplate() {
+    const resp = await api.get('/users/bulk-upload-template', { responseType: 'blob' });
+    const blob = new Blob([resp.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'user_upload_template.xlsx';
+    link.click();
+  }
+
+  async function handleUpload() {
+    if (!file) return;
+    setUploading(true);
+    setResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const resp = await api.post('/users/bulk-upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setResult(resp.data);
+      qc.invalidateQueries(['admin-users']);
+    } catch (err) {
+      setResult({ created: 0, failed: 1, errors: [{ row: 0, reason: err.response?.data?.error || 'Upload failed' }] });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault(); setDragOver(false);
+    const f = e.dataTransfer?.files?.[0];
+    if (f && /\.xlsx$/i.test(f.name)) setFile(f);
+  }
+
+  return (
+    <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200 }} onClick={onClose}>
+      <div style={{ background:'white',borderRadius:12,width:540,padding:24,boxShadow:'0 12px 40px rgba(0,0,0,0.15)' }} onClick={e=>e.stopPropagation()}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18 }}>
+          <h3 style={{ fontSize:16,fontWeight:700,color:'var(--navy)',margin:0 }}>Bulk Upload Users</h3>
+          <button onClick={onClose} style={{ background:'none',border:'none',fontSize:18,cursor:'pointer',color:'var(--grey-text)' }}>×</button>
+        </div>
+
+        {/* Step 1: Download template */}
+        <div style={{ marginBottom:18 }}>
+          <div style={{ fontSize:12,fontWeight:700,color:'var(--navy)',marginBottom:6 }}>Step 1: Download Template</div>
+          <button onClick={handleDownloadTemplate} style={{ padding:'7px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Download Template (.xlsx)</button>
+        </div>
+
+        {/* Step 2: Upload */}
+        <div style={{ marginBottom:18 }}>
+          <div style={{ fontSize:12,fontWeight:700,color:'var(--navy)',marginBottom:6 }}>Step 2: Upload Filled Excel</div>
+          <div
+            onDragOver={e=>{e.preventDefault();setDragOver(true);}}
+            onDragLeave={()=>setDragOver(false)}
+            onDrop={handleDrop}
+            style={{
+              border:`2px dashed ${dragOver?'var(--navy)':'var(--grey-border)'}`,
+              borderRadius:10,padding:24,textAlign:'center',
+              background:dragOver?'var(--navy-xlight)':'var(--grey-bg)',
+              transition:'all 0.15s',cursor:'pointer',marginBottom:10,
+            }}
+            onClick={()=>document.getElementById('bulk-file-input')?.click()}
+          >
+            <input id="bulk-file-input" type="file" accept=".xlsx" style={{ display:'none' }} onChange={e=>{if(e.target.files[0])setFile(e.target.files[0]);}} />
+            {file ? (
+              <div style={{ fontSize:13,fontWeight:700,color:'var(--navy)' }}>{file.name}</div>
+            ) : (
+              <>
+                <div style={{ fontSize:13,color:'var(--grey-text)',marginBottom:4 }}>Drag & drop .xlsx file here or click to browse</div>
+                <div style={{ fontSize:11,color:'#B0BAC8' }}>Excel files only (.xlsx)</div>
+              </>
+            )}
+          </div>
+          <div style={{ display:'flex',gap:8 }}>
+            <button onClick={handleUpload} disabled={!file||uploading} style={{ padding:'7px 14px',background:file?'var(--navy)':'var(--grey-border)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:file?'pointer':'not-allowed' }}>
+              {uploading?'Uploading…':'Upload'}
+            </button>
+            {file && <button onClick={()=>{setFile(null);setResult(null);}} style={{ padding:'7px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:7,fontFamily:'var(--font)',fontSize:12,cursor:'pointer' }}>Clear</button>}
+          </div>
+        </div>
+
+        {/* Results */}
+        {result && (
+          <div style={{ border:'1px solid var(--grey-border)',borderRadius:8,padding:14,background:result.failed?'rgba(232,35,42,0.03)':'rgba(10,122,121,0.03)' }}>
+            <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)',marginBottom:8 }}>
+              {result.created} user{result.created!==1?'s':''} created{result.failed>0?`, ${result.failed} row${result.failed!==1?'s':''} failed`:''}
+            </div>
+            {result.errors?.length>0 && (
+              <div style={{ maxHeight:160,overflow:'auto' }}>
+                <table style={{ width:'100%',borderCollapse:'collapse' }}>
+                  <thead><tr>
+                    <th style={{ padding:'4px 8px',fontSize:10,fontWeight:700,textAlign:'left',color:'var(--grey-text)',borderBottom:'1px solid var(--grey-border)' }}>Row</th>
+                    <th style={{ padding:'4px 8px',fontSize:10,fontWeight:700,textAlign:'left',color:'var(--grey-text)',borderBottom:'1px solid var(--grey-border)' }}>Reason</th>
+                  </tr></thead>
+                  <tbody>{result.errors.map((e,i)=>(
+                    <tr key={i}>
+                      <td style={{ padding:'4px 8px',fontSize:12,color:'var(--red)',borderBottom:'1px solid var(--grey-bg)' }}>{e.row}</td>
+                      <td style={{ padding:'4px 8px',fontSize:12,color:'var(--red)',borderBottom:'1px solid var(--grey-bg)' }}>{e.reason}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function UsersPanel() {
   const { data: users=[], isLoading } = useQuery({ queryKey:['admin-users'], queryFn:()=>api.get('/users').then(r=>r.data) });
-  const [showCreate, setShowCreate] = useState(false);
   const qc = useQueryClient();
-  const [form, setForm] = useState({ email:'',name:'',job_title:'',roles:['team_member'] });
-  const create = useMutation({ mutationFn:data=>api.post('/users',data).then(r=>r.data), onSuccess:()=>{ qc.invalidateQueries(['admin-users']); setShowCreate(false); } });
+
+  // Create form
+  const [showCreate, setShowCreate] = useState(false);
+  const emptyForm = { email:'',name:'',employee_id:'',designation:'',location:'',team:'',contact_number:'',roles:['team_member'] };
+  const [form, setForm] = useState({...emptyForm});
+  const create = useMutation({ mutationFn:data=>api.post('/users',data).then(r=>r.data), onSuccess:()=>{ qc.invalidateQueries(['admin-users']); setShowCreate(false); setForm({...emptyForm}); } });
+
+  // Edit
+  const [editUser, setEditUser] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const updateUser = useMutation({ mutationFn:({id,...data})=>api.put(`/users/${id}`,data).then(r=>r.data), onSuccess:()=>{ qc.invalidateQueries(['admin-users']); setEditUser(null); setEditForm(null); } });
+
+  // Bulk upload
+  const [showBulk, setShowBulk] = useState(false);
+
   const deactivate = useMutation({ mutationFn:id=>api.post(`/users/${id}/deactivate`), onSuccess:()=>qc.invalidateQueries(['admin-users']) });
   const reactivate = useMutation({ mutationFn:id=>api.post(`/users/${id}/reactivate`), onSuccess:()=>qc.invalidateQueries(['admin-users']) });
 
+  function openEdit(u) {
+    setEditUser(u);
+    setEditForm({ name:u.name||'', email:u.email||'', employee_id:u.employee_id||'', designation:u.designation||'', location:u.location||'', team:u.team||'', contact_number:u.contact_number||'', roles:u.roles||['team_member'] });
+    setShowCreate(false);
+  }
+
+  const thStyle = { padding:'8px 10px',fontSize:10,fontWeight:700,letterSpacing:0.8,textTransform:'uppercase',color:'var(--grey-text)',textAlign:'left',background:'var(--grey-bg)',borderBottom:'1.5px solid var(--grey-border)',whiteSpace:'nowrap' };
+  const tdStyle = { padding:'7px 10px',fontSize:12,color:'var(--grey-text)',borderBottom:'1px solid var(--grey-bg)',whiteSpace:'nowrap' };
+
   return (
     <div>
+      {showBulk && <BulkUploadModal onClose={()=>setShowBulk(false)} />}
+
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}>
         <div><h2 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',marginBottom:3 }}>User Management</h2><p style={{ fontSize:13,color:'var(--grey-text)' }}>{users.length} accounts</p></div>
-        <button onClick={()=>setShowCreate(true)} style={{ padding:'7px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>+ Add User</button>
+        <div style={{ display:'flex',gap:8 }}>
+          <button onClick={()=>setShowBulk(true)} style={{ padding:'7px 14px',background:'var(--amber)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>Bulk Upload</button>
+          <button onClick={()=>{setShowCreate(true);setEditUser(null);setEditForm(null);}} style={{ padding:'7px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:'pointer' }}>+ Add User</button>
+        </div>
       </div>
-      {showCreate&&(
+
+      {/* Create panel */}
+      {showCreate&&!editUser&&(
         <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:18,marginBottom:16 }}>
           <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)',marginBottom:12 }}>New User</div>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10 }}>
-            {[['email','Email *','email'],['name','Full Name *','text'],['job_title','Job Title','text']].map(([k,l,t])=>(
-              <div key={k}><label style={{ display:'block',fontSize:11,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)',marginBottom:4 }}>{l}</label>
-              <input type={t} value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%',height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontFamily:'var(--font)',fontSize:13,color:'var(--navy)',background:'var(--grey-bg)',outline:'none' }}/></div>
-            ))}
-          </div>
-          <div style={{ marginBottom:12 }}>
-            <label style={{ display:'block',fontSize:11,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)',marginBottom:6 }}>Roles</label>
-            <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-              {ROLES_ALL.map(r=><label key={r} style={{ display:'flex',alignItems:'center',gap:5,fontSize:12,cursor:'pointer' }}><input type="checkbox" checked={(form.roles||[]).includes(r)} onChange={e=>{const next=e.target.checked?[...(form.roles||[]),r]:(form.roles||[]).filter(x=>x!==r);setForm({...form,roles:next});}}/>{ROLE_LABELS[r]}</label>)}
-            </div>
-          </div>
+          <UserFormFields form={form} setForm={setForm} />
           <div style={{ display:'flex',gap:8 }}>
             <button onClick={()=>setShowCreate(false)} style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
             <button onClick={()=>create.mutate(form)} disabled={create.isPending||!form.email||!form.name} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{create.isPending?'Creating…':'Create'}</button>
           </div>
         </div>
       )}
-      <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,overflow:'hidden' }}>
+
+      {/* Edit panel */}
+      {editUser&&editForm&&(
+        <div style={{ background:'white',border:'1px solid var(--navy)',borderRadius:10,padding:18,marginBottom:16 }}>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
+            <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)' }}>Edit User — {editUser.name}</div>
+            <button onClick={()=>{setEditUser(null);setEditForm(null);}} style={{ background:'none',border:'none',fontSize:16,cursor:'pointer',color:'var(--grey-text)' }}>×</button>
+          </div>
+          <UserFormFields form={editForm} setForm={setEditForm} />
+          <div style={{ display:'flex',gap:8 }}>
+            <button onClick={()=>{setEditUser(null);setEditForm(null);}} style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
+            <button onClick={()=>updateUser.mutate({id:editUser.id,...editForm})} disabled={updateUser.isPending||!editForm.name} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{updateUser.isPending?'Saving…':'Save Changes'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Users table */}
+      <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,overflow:'auto' }}>
         {isLoading?<div style={{ padding:30,textAlign:'center',color:'var(--grey-text)',fontSize:13 }}>Loading…</div>:(
           <table style={{ width:'100%',borderCollapse:'collapse' }}>
-            <thead><tr>{['User','Email','Roles','Last Login','Status',''].map(h=><th key={h} style={{ padding:'8px 12px',fontSize:10.5,fontWeight:700,letterSpacing:0.8,textTransform:'uppercase',color:'var(--grey-text)',textAlign:'left',background:'var(--grey-bg)',borderBottom:'1.5px solid var(--grey-border)' }}>{h}</th>)}</tr></thead>
+            <thead><tr>
+              {['Emp ID','Name','Email','Designation','Location','Team','Contact','Roles','Last Login','Status',''].map(h=><th key={h} style={thStyle}>{h}</th>)}
+            </tr></thead>
             <tbody>{users.map(u=>(
-              <tr key={u.id} style={{ opacity:u.is_active?1:0.55 }}>
-                <td style={{ padding:'9px 12px',borderBottom:'1px solid var(--grey-bg)' }}><div style={{ display:'flex',alignItems:'center',gap:8 }}><div style={{ width:28,height:28,borderRadius:'50%',background:u.is_active?'var(--navy)':'#8A9BB0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'white',flexShrink:0 }}>{u.name.slice(0,2).toUpperCase()}</div><div><div style={{ fontSize:13,fontWeight:700,color:'var(--navy)' }}>{u.name}</div><div style={{ fontSize:11,color:'var(--grey-text)' }}>{u.job_title||''}</div></div></div></td>
-                <td style={{ padding:'9px 12px',fontSize:12,color:'var(--grey-text)',borderBottom:'1px solid var(--grey-bg)' }}>{u.email}</td>
-                <td style={{ padding:'9px 12px',borderBottom:'1px solid var(--grey-bg)' }}><div style={{ display:'flex',gap:4,flexWrap:'wrap' }}>{(u.roles||[]).map(r=><span key={r} style={{ fontSize:10,fontWeight:700,padding:'2px 6px',borderRadius:10,background:`${ROLE_COLORS[r]||'#999'}22`,color:ROLE_COLORS[r]||'#999' }}>{ROLE_LABELS[r]||r}</span>)}</div></td>
-                <td style={{ padding:'9px 12px',fontSize:12,color:'var(--grey-text)',borderBottom:'1px solid var(--grey-bg)' }}>{u.last_login?new Date(u.last_login).toLocaleDateString('en-GB'):'Never'}</td>
-                <td style={{ padding:'9px 12px',borderBottom:'1px solid var(--grey-bg)' }}><span style={{ display:'inline-flex',alignItems:'center',gap:5,fontSize:12,fontWeight:700,color:u.is_active?'var(--green)':'var(--grey-text)' }}><span style={{ width:7,height:7,borderRadius:'50%',background:u.is_active?'#4AE08A':'var(--grey-border)',display:'inline-block' }}/>{u.is_active?'Active':'Inactive'}</span></td>
-                <td style={{ padding:'9px 12px',borderBottom:'1px solid var(--grey-bg)' }}>{u.is_active?<button onClick={()=>deactivate.mutate(u.id)} style={{ padding:'3px 8px',background:'rgba(232,35,42,0.08)',color:'var(--red)',border:'none',borderRadius:4,fontFamily:'var(--font)',fontSize:11,cursor:'pointer' }}>Deactivate</button>:<button onClick={()=>reactivate.mutate(u.id)} style={{ padding:'3px 8px',background:'rgba(10,122,121,0.08)',color:'var(--green)',border:'none',borderRadius:4,fontFamily:'var(--font)',fontSize:11,cursor:'pointer' }}>Reactivate</button>}</td>
+              <tr key={u.id} onClick={()=>openEdit(u)} style={{ opacity:u.is_active?1:0.55,cursor:'pointer' }}
+                onMouseEnter={e=>e.currentTarget.style.background='var(--grey-bg)'}
+                onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                <td style={tdStyle}>{u.employee_id||'—'}</td>
+                <td style={{ ...tdStyle,fontWeight:700,color:'var(--navy)' }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                    <div style={{ width:26,height:26,borderRadius:'50%',background:u.is_active?'var(--navy)':'#8A9BB0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'white',flexShrink:0 }}>{u.name.slice(0,2).toUpperCase()}</div>
+                    {u.name}
+                  </div>
+                </td>
+                <td style={tdStyle}>{u.email}</td>
+                <td style={tdStyle}>{u.designation||'—'}</td>
+                <td style={tdStyle}>{u.location||'—'}</td>
+                <td style={tdStyle}>{u.team||'—'}</td>
+                <td style={tdStyle}>{u.contact_number||'—'}</td>
+                <td style={{ ...tdStyle,whiteSpace:'normal' }}><div style={{ display:'flex',gap:3,flexWrap:'wrap' }}>{(u.roles||[]).map(r=><span key={r} style={{ fontSize:9,fontWeight:700,padding:'2px 5px',borderRadius:10,background:`${ROLE_COLORS[r]||'#999'}22`,color:ROLE_COLORS[r]||'#999' }}>{ROLE_LABELS[r]||r}</span>)}</div></td>
+                <td style={tdStyle}>{u.last_login?new Date(u.last_login).toLocaleDateString('en-GB'):'Never'}</td>
+                <td style={tdStyle}><span style={{ display:'inline-flex',alignItems:'center',gap:4,fontSize:11,fontWeight:700,color:u.is_active?'var(--green)':'var(--grey-text)' }}><span style={{ width:6,height:6,borderRadius:'50%',background:u.is_active?'#4AE08A':'var(--grey-border)',display:'inline-block' }}/>{u.is_active?'Active':'Inactive'}</span></td>
+                <td style={tdStyle} onClick={e=>e.stopPropagation()}>{u.is_active?<button onClick={()=>deactivate.mutate(u.id)} style={{ padding:'3px 8px',background:'rgba(232,35,42,0.08)',color:'var(--red)',border:'none',borderRadius:4,fontFamily:'var(--font)',fontSize:11,cursor:'pointer' }}>Deactivate</button>:<button onClick={()=>reactivate.mutate(u.id)} style={{ padding:'3px 8px',background:'rgba(10,122,121,0.08)',color:'var(--green)',border:'none',borderRadius:4,fontFamily:'var(--font)',fontSize:11,cursor:'pointer' }}>Reactivate</button>}</td>
               </tr>
             ))}</tbody>
           </table>
