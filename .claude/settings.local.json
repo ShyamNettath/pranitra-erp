@@ -3,7 +3,9 @@
     "allow": [
       "Bash(grep -r \"export.*csv\\\\|export.*xlsx\\\\|import.*csv\\\\|import.*xlsx\" /c/ERP/pranitra --include=*.js --include=*.jsx)",
       "Bash(cd /c/ERP/pranitra/backend && npm install)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node src/config/migrate-project-fields.js)",
+      "Bash(cd C:/ERP/pranitra && node -e \"try { require\\('fs'\\).readFileSync\\('frontend/src/pages/ProjectsPage.jsx', 'utf8'\\); console.log\\('File reads OK, length:', require\\('fs'\\).readFileSync\\('frontend/src/pages/ProjectsPage.jsx','utf8'\\).length\\); } catch\\(e\\) { console.error\\(e.message\\); }\")"
     ]
   }
 }

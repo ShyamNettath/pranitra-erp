@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
 import useAuthStore from '@/store/authStore';
 
-const TABS = ['Overview','Design','Simulation','Planning','Layout','Tasks','LOP','Files'];
+const ALL_TABS = ['Overview','Design','Simulation','Planning','Layout','Tasks','LOP','Files'];
+const SECTION_TABS = ['Design','Simulation','Planning','Layout'];
 const SC = { active:'#4AE08A',pending_approval:'#B86A00',draft:'#B0BAC8',on_hold:'#E8232A',completed:'#0A7A79',changes_requested:'#E8232A' };
 const SL = { active:'Active',pending_approval:'Pending Approval',draft:'Draft',on_hold:'On Hold',completed:'Completed',changes_requested:'Changes Requested' };
 
@@ -88,9 +89,12 @@ export default function ProjectDetailPage() {
           <button onClick={()=>navigate('/projects')} style={{ background:'none',border:'none',color:'var(--grey-text)',cursor:'pointer',fontSize:13,marginBottom:4 }}>← Projects</button>
           <div style={{ display:'flex',alignItems:'center',gap:10 }}>
             <div style={{ width:12,height:12,borderRadius:'50%',background:project.color||'var(--navy)' }}/>
-            <h1 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',margin:0 }}>{project.name}</h1>
+            <h1 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',margin:0 }}>
+              {project.customer_name ? `${project.customer_name} — ${project.project_code || project.name}` : project.name}
+            </h1>
             <span style={{ padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:`${SC[project.status]||'#B0BAC8'}22`,color:SC[project.status]||'#B0BAC8' }}>{SL[project.status]||project.status}</span>
           </div>
+          {project.oem_name && <div style={{ fontSize:13,color:'var(--grey-text)',marginTop:2,marginBottom:0,fontWeight:600 }}>{project.oem_name}</div>}
           {project.description&&<p style={{ fontSize:12,color:'var(--grey-text)',marginTop:2,marginBottom:0 }}>{project.description}</p>}
         </div>
         <div style={{ display:'flex',gap:6 }}>
@@ -105,21 +109,33 @@ export default function ProjectDetailPage() {
 
       {/* Stats strip */}
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',background:'white',border:'1px solid var(--grey-border)',borderRadius:6,padding:'6px 20px',marginBottom:8,height:42 }}>
-        <Stat label="Baseline" value={`${parseFloat(project.baseline_hours||0).toFixed(0)}h`}/>
-        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
-        <Stat label="Actual" value={`${parseFloat(project.actual_hours||0).toFixed(0)}h`}/>
-        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
+        {project.cycle_time && <><Stat label="Cycle Time" value={project.cycle_time}/><div style={{ width:1,height:22,background:'var(--grey-border)' }}/></>}
+        {project.payment_terms && <><Stat label="Payment Terms" value={project.payment_terms}/><div style={{ width:1,height:22,background:'var(--grey-border)' }}/></>}
         <Stat label="Budget" value={project.budget?`€${Number(project.budget).toLocaleString('en-GB')}`:'—'}/>
         <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
         <Stat label="Start" value={project.start_date?new Date(project.start_date).toLocaleDateString('en-GB'):'—'}/>
         <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
         <Stat label="End" value={project.end_date?new Date(project.end_date).toLocaleDateString('en-GB'):'—'}/>
+        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
+        <Stat label="Baseline" value={`${parseFloat(project.baseline_hours||0).toFixed(0)}h`}/>
+        <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
+        <Stat label="Actual" value={`${parseFloat(project.actual_hours||0).toFixed(0)}h`}/>
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex',gap:2,borderBottom:'2px solid var(--grey-border)',marginBottom:10 }}>
-        {TABS.map(t=><button key={t} onClick={()=>setTab(t)} style={{ padding:'8px 16px',background:'none',border:'none',borderBottom:tab===t?'2px solid var(--navy)':'2px solid transparent',marginBottom:-2,fontFamily:'var(--font)',fontSize:13,fontWeight:tab===t?700:400,color:tab===t?'var(--navy)':'var(--grey-text)',cursor:'pointer' }}>{t}</button>)}
-      </div>
+      {(() => {
+        const projectSections = Array.isArray(project.sections) ? project.sections : [];
+        const hasSections = projectSections.length > 0;
+        const visibleTabs = ALL_TABS.filter(t => {
+          if (!SECTION_TABS.includes(t)) return true; // Overview, Tasks, LOP, Files always visible
+          return hasSections ? projectSections.includes(t) : true; // Old projects: show all tabs
+        });
+        return (
+          <div style={{ display:'flex',gap:2,borderBottom:'2px solid var(--grey-border)',marginBottom:10 }}>
+            {visibleTabs.map(t=><button key={t} onClick={()=>setTab(t)} style={{ padding:'8px 16px',background:'none',border:'none',borderBottom:tab===t?'2px solid var(--navy)':'2px solid transparent',marginBottom:-2,fontFamily:'var(--font)',fontSize:13,fontWeight:tab===t?700:400,color:tab===t?'var(--navy)':'var(--grey-text)',cursor:'pointer' }}>{t}</button>)}
+          </div>
+        );
+      })()}
 
       {/* Tab content */}
       {tab==='Overview'&&(
@@ -212,6 +228,7 @@ export default function ProjectDetailPage() {
 
       {(tab==='Planning'||tab==='Layout')&&<PlanningLayoutTab type={tab.toLowerCase()} projectId={id} isPM={isPM}/>}
       {tab==='Tasks'&&<TasksPanel projectId={id}/>}
+      {tab==='Files'&&<FilesTab projectId={id}/>}
       {tab==='LOP'&&<LopTab projectId={id} project={project} user={user} lopSections={lopSections} lopItems={lopItems} lopLoading={lopLoading} refetchLop={refetchLop} lopStatusFilter={lopStatusFilter} setLopStatusFilter={setLopStatusFilter} lopImpactFilter={lopImpactFilter} setLopImpactFilter={setLopImpactFilter} lopSectionFilter={lopSectionFilter} setLopSectionFilter={setLopSectionFilter} lopOwnerFilter={lopOwnerFilter} setLopOwnerFilter={setLopOwnerFilter} lopAddingSection={lopAddingSection} setLopAddingSection={setLopAddingSection} newSectionName={newSectionName} setNewSectionName={setNewSectionName} newSectionDescription={newSectionDescription} setNewSectionDescription={setNewSectionDescription} qc={qc} isPM={isPM}/>}
       {/* Approval modal */}
       {modal&&(

@@ -36,6 +36,11 @@ exports.list = async (req, res, next) => {
     }
 
     const projects = await q.orderBy('p.created_at', 'desc');
+    // Parse JSON fields
+    for (const p of projects) {
+      if (typeof p.sections === 'string') try { p.sections = JSON.parse(p.sections); } catch {}
+      if (typeof p.software === 'string') try { p.software = JSON.parse(p.software); } catch {}
+    }
     return res.json(projects);
   } catch (err) { next(err); }
 };
@@ -56,14 +61,27 @@ exports.get = async (req, res, next) => {
       .where({ 'pm.project_id': id, 'pm.is_active': true })
       .select('u.id', 'u.name', 'u.email', 'pm.role', 'pm.allocation_pct');
 
-    return res.json({ ...project, members });
+    // Parse JSON fields if stored as strings
+    if (typeof project.sections === 'string') try { project.sections = JSON.parse(project.sections); } catch {}
+    if (typeof project.software === 'string') try { project.software = JSON.parse(project.software); } catch {}
+
+    // Fetch commercial milestones
+    const commercial_milestones = await db('project_milestones')
+      .where({ project_id: id }).orderBy('sort_order');
+
+    return res.json({ ...project, members, commercial_milestones });
   } catch (err) { next(err); }
 };
 
 // ── POST /api/projects ────────────────────────────────────────────
 exports.create = async (req, res, next) => {
   try {
-    const { workspace_id, name, description, color, start_date, end_date, budget } = req.body;
+    const {
+      workspace_id, name, description, color, start_date, end_date, budget,
+      customer_name, oem_name, project_code, cycle_time, payment_terms,
+      sections, software, milestones,
+    } = req.body;
+
     const [project] = await db('projects').insert({
       workspace_id, name, description, color,
       status: 'draft',
@@ -72,12 +90,33 @@ exports.create = async (req, res, next) => {
       baseline_start_date: start_date,
       baseline_end_date: end_date,
       budget,
+      customer_name: customer_name || null,
+      oem_name: oem_name || null,
+      project_code: project_code || null,
+      cycle_time: cycle_time || null,
+      payment_terms: payment_terms || null,
+      sections: sections ? JSON.stringify(sections) : null,
+      software: software ? JSON.stringify(software) : null,
     }).returning('*');
 
     // Add PM as member
     await db('project_members').insert({
       project_id: project.id, user_id: req.user.id, role: 'project_manager', allocation_pct: 0, added_date: new Date(),
     }).onConflict().ignore();
+
+    // Insert commercial milestones if provided
+    if (milestones && Array.isArray(milestones)) {
+      const rows = milestones
+        .filter(m => m.name && m.name.trim())
+        .map((m, i) => ({
+          project_id: project.id,
+          name: m.name,
+          due_date: m.due_date || null,
+          amount: m.amount || null,
+          sort_order: i,
+        }));
+      if (rows.length) await db('project_milestones').insert(rows);
+    }
 
     await writeAuditLog(req.user.id, 'project.create', 'project', project.id, { name }, req);
     return res.status(201).json(project);
@@ -88,7 +127,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const allowed = ['name','description','color','start_date','end_date','budget'];
+    const allowed = ['name','description','color','start_date','end_date','budget','customer_name','oem_name','project_code','cycle_time','payment_terms','sections','software'];
     const data = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
     const [updated] = await db('projects').where({ id, is_deleted: false }).update(data).returning('*');
     if (!updated) return res.status(404).json({ error: 'Project not found' });
