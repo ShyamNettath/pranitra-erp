@@ -98,6 +98,7 @@ export default function AppShell() {
               onChange={(e) => selectWorkspace(e.target.value).then(() => navigate('/'))}
               onMouseEnter={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
               onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.08)'}
+              title="Switch workspace"
               style={{
                 padding: '6px 12px', background: 'rgba(255,255,255,0.08)',
                 border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
@@ -119,7 +120,7 @@ export default function AppShell() {
               background: dropdownOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)',
               border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
               cursor: 'pointer',
-            }} onClick={() => setDropdownOpen(!dropdownOpen)}>
+            }} onClick={() => setDropdownOpen(!dropdownOpen)} title="Account menu">
               <div style={{
                 width: 28, height: 28, borderRadius: '50%',
                 background: 'var(--red)', display: 'flex', alignItems: 'center',
@@ -150,6 +151,7 @@ export default function AppShell() {
                 <div style={{ padding: '6px 0' }}>
                   <button
                     onClick={() => { setDropdownOpen(false); setShowPasswordModal(true); }}
+                    title="Change your password"
                     style={{
                       width: '100%', padding: '10px 16px', background: 'none', border: 'none',
                       fontFamily: 'var(--font)', fontSize: 13, color: 'var(--navy)',
@@ -162,6 +164,7 @@ export default function AppShell() {
                   </button>
                   <button
                     onClick={() => { setDropdownOpen(false); logout().then(() => navigate('/login')); }}
+                    title="Sign out of your account"
                     style={{
                       width: '100%', padding: '10px 16px', background: 'none', border: 'none',
                       fontFamily: 'var(--font)', fontSize: 13, color: 'var(--red)', fontWeight: 700,
@@ -244,7 +247,7 @@ export default function AppShell() {
             padding: '12px', borderTop: '1px solid var(--grey-border)',
             display: 'flex', justifyContent: sidebarOpen ? 'flex-end' : 'center',
           }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'} style={{
               width: 28, height: 28, borderRadius: 6,
               border: '1.5px solid var(--grey-border)', background: 'white',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',

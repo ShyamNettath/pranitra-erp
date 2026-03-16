@@ -421,7 +421,7 @@ export default function ProjectsPage() {
           <p style={{ fontSize: 13, color: 'var(--grey-text)' }}>{projects.length} project{projects.length !== 1 ? 's' : ''} in {workspace?.name}</p>
         </div>
         {canCreate && (
-          <button onClick={() => setShowCreate(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 8, fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setShowCreate(true)} title="Create a new project" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 8, fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             + New Project
           </button>
         )}
@@ -431,10 +431,10 @@ export default function ProjectsPage() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input
           value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search projects…"
+          placeholder="Search projects…" title="Search projects by name"
           style={{ height: 34, border: '1.5px solid var(--grey-border)', borderRadius: 7, padding: '0 12px', fontFamily: 'var(--font)', fontSize: 13, color: 'var(--navy)', background: 'white', outline: 'none', width: 220 }}
         />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ height: 34, border: '1.5px solid var(--grey-border)', borderRadius: 7, padding: '0 10px', fontFamily: 'var(--font)', fontSize: 13, color: 'var(--navy)', background: 'white', outline: 'none', cursor: 'pointer' }}>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} title="Filter by status" style={{ height: 34, border: '1.5px solid var(--grey-border)', borderRadius: 7, padding: '0 10px', fontFamily: 'var(--font)', fontSize: 13, color: 'var(--navy)', background: 'white', outline: 'none', cursor: 'pointer' }}>
           <option value="">All Statuses</option>
           {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
@@ -500,12 +500,12 @@ export default function ProjectsPage() {
                               onClick={() => approveMut.mutate(p.id)}
                               disabled={approveMut.isPending}
                               style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: 'none', background: 'rgba(10,122,121,0.1)', color: 'var(--green)', cursor: 'pointer', fontFamily: 'var(--font)' }}
-                            >Approve</button>
+                            title="Approve this project">Approve</button>
                           )}
                           <button
                             onClick={() => setDeleteConfirm({ id: p.id, name: p.name })}
                             style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: 'none', background: 'rgba(232,35,42,0.08)', color: 'var(--red)', cursor: 'pointer', fontFamily: 'var(--font)' }}
-                          >Delete</button>
+                          title="Delete this project">Delete</button>
                         </div>
                       ) : (
                         <span style={{ fontSize: 18, color: 'var(--grey-text)' }}>›</span>

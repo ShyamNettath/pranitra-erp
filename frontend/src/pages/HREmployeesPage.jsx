@@ -69,7 +69,7 @@ function DetailPanel({ employee, onClose, isSuperUser }) {
             <div style={{ fontSize:12, color:'var(--grey-text)' }}>{e.designation} {e.department ? `· ${e.department}` : ''}</div>
           </div>
           <StatusBadge status={e.employee_status} />
-          <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:'1px solid var(--grey-border)', background:'white', cursor:'pointer', fontSize:14, color:'var(--grey-text)', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+          <button onClick={onClose} title="Close panel" style={{ width:28, height:28, borderRadius:6, border:'1px solid var(--grey-border)', background:'white', cursor:'pointer', fontSize:14, color:'var(--grey-text)', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
         </div>
 
         {/* Tabs */}
@@ -274,6 +274,7 @@ export default function HREmployeesPanel() {
             <button
               onClick={handleSync}
               disabled={syncing}
+              title="Sync employee data from Zoho People"
               style={{ padding:'8px 16px', background:'var(--navy)', color:'white', border:'none', borderRadius:7, fontFamily:'var(--font)', fontSize:12, fontWeight:700, cursor:syncing?'not-allowed':'pointer' }}
             >
               {syncing ? 'Syncing...' : 'Sync from Zoho'}
@@ -288,11 +289,13 @@ export default function HREmployeesPanel() {
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1); }}
           placeholder="Search by name, ID, email, department..."
+          title="Search by name, ID, email or department"
           style={{ flex:1, minWidth:200, height:34, border:'1.5px solid var(--grey-border)', borderRadius:6, padding:'0 10px', fontFamily:'var(--font)', fontSize:13, color:'var(--navy)', outline:'none' }}
         />
         <select
           value={deptFilter}
           onChange={e => { setDeptFilter(e.target.value); setPage(1); }}
+          title="Filter by department"
           style={{ height:34, border:'1.5px solid var(--grey-border)', borderRadius:6, padding:'0 10px', fontFamily:'var(--font)', fontSize:12, color:'var(--navy)', background:'white' }}
         >
           <option value="">All Departments</option>
@@ -301,6 +304,7 @@ export default function HREmployeesPanel() {
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+          title="Filter by status"
           style={{ height:34, border:'1.5px solid var(--grey-border)', borderRadius:6, padding:'0 10px', fontFamily:'var(--font)', fontSize:12, color:'var(--navy)', background:'white' }}
         >
           <option value="">All Statuses</option>
@@ -367,9 +371,9 @@ export default function HREmployeesPanel() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:8, padding:'12px 0', borderTop:'1px solid var(--grey-border)' }}>
-            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding:'6px 12px', borderRadius:6, border:'1px solid var(--grey-border)', background:'white', cursor:page <= 1 ? 'not-allowed' : 'pointer', fontFamily:'var(--font)', fontSize:12 }}>Prev</button>
+            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} title="Previous page" style={{ padding:'6px 12px', borderRadius:6, border:'1px solid var(--grey-border)', background:'white', cursor:page <= 1 ? 'not-allowed' : 'pointer', fontFamily:'var(--font)', fontSize:12 }}>Prev</button>
             <span style={{ fontSize:12, color:'var(--grey-text)' }}>Page {page} of {totalPages}</span>
-            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding:'6px 12px', borderRadius:6, border:'1px solid var(--grey-border)', background:'white', cursor:page >= totalPages ? 'not-allowed' : 'pointer', fontFamily:'var(--font)', fontSize:12 }}>Next</button>
+            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} title="Next page" style={{ padding:'6px 12px', borderRadius:6, border:'1px solid var(--grey-border)', background:'white', cursor:page >= totalPages ? 'not-allowed' : 'pointer', fontFamily:'var(--font)', fontSize:12 }}>Next</button>
           </div>
         )}
       </div>

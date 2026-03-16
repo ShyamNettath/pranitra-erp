@@ -282,7 +282,7 @@ export default function ResourcesPage() {
             <h1 style={{ fontSize:20,fontWeight:700,color:'var(--navy)',marginBottom:3 }}>Resource Pool</h1>
             <p style={{ fontSize:13,color:'var(--grey-text)' }}>{profiles.length} associates</p>
           </div>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search associates…"
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search associates…" title="Search associates by name"
             style={{ height:34,border:'1.5px solid var(--grey-border)',borderRadius:7,padding:'0 12px',fontFamily:'var(--font)',fontSize:13,color:'var(--navy)',background:'white',outline:'none',width:220 }}/>
         </div>
 
@@ -332,7 +332,7 @@ export default function ResourcesPage() {
         <div style={{ width:340,flexShrink:0,background:'white',border:'1px solid var(--grey-border)',borderRadius:10,overflow:'auto',display:'flex',flexDirection:'column' }}>
           {/* Header */}
           <div style={{ background:'var(--navy)',padding:'18px 18px 14px',position:'relative' }}>
-            <button onClick={()=>setSelected(null)} style={{ position:'absolute',top:12,right:12,background:'rgba(255,255,255,0.1)',border:'none',color:'white',cursor:'pointer',borderRadius:5,padding:'2px 8px',fontFamily:'var(--font)',fontSize:13 }}>×</button>
+            <button onClick={()=>setSelected(null)} title="Close panel" style={{ position:'absolute',top:12,right:12,background:'rgba(255,255,255,0.1)',border:'none',color:'white',cursor:'pointer',borderRadius:5,padding:'2px 8px',fontFamily:'var(--font)',fontSize:13 }}>×</button>
             <div style={{ width:48,height:48,borderRadius:'50%',background:'var(--red)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:700,color:'white',marginBottom:10 }}>{(profile.name||'?').slice(0,2).toUpperCase()}</div>
             <div style={{ fontSize:16,fontWeight:700,color:'white' }}>{profile.name}</div>
             <div style={{ fontSize:12,color:'rgba(255,255,255,0.7)' }}>{profile.job_title||'—'} · {profile.department||'—'}</div>

@@ -59,14 +59,14 @@ export default function DashboardPage() {
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)' }}>Recent Projects</div>
             <div style={{ fontSize: 12, color: 'var(--grey-text)', marginTop: 2 }}>Recently updated in your workspace</div>
           </div>
-          <button onClick={() => navigate('/projects')} style={{ padding: '6px 14px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => navigate('/projects')} title="View all projects" style={{ padding: '6px 14px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
             View All
           </button>
         </div>
 
         {recent.length === 0 ? (
           <div style={{ padding: '40px 18px', textAlign: 'center', color: 'var(--grey-text)', fontSize: 13 }}>
-            No projects yet. <span onClick={() => navigate('/projects')} style={{ color: 'var(--navy)', cursor: 'pointer', fontWeight: 700 }}>Create your first project →</span>
+            No projects yet. <span onClick={() => navigate('/projects')} title="Create a new project" style={{ color: 'var(--navy)', cursor: 'pointer', fontWeight: 700 }}>Create your first project →</span>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

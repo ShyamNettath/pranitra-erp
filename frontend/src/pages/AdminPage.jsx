@@ -250,8 +250,8 @@ function UsersPanel() {
           <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)',marginBottom:12 }}>New User</div>
           <UserFormFields form={form} setForm={setForm} />
           <div style={{ display:'flex',gap:8 }}>
-            <button onClick={()=>setShowCreate(false)} style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
-            <button onClick={()=>create.mutate(form)} disabled={create.isPending||!form.email||!form.name} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{create.isPending?'Creating…':'Create'}</button>
+            <button onClick={()=>setShowCreate(false)} title="Cancel creation" style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
+            <button onClick={()=>create.mutate(form)} disabled={create.isPending||!form.email||!form.name} title="Create new user" style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{create.isPending?'Creating…':'Create'}</button>
           </div>
         </div>
       )}
@@ -295,13 +295,13 @@ function UsersPanel() {
           </div>
 
           <div style={{ display:'flex',gap:8 }}>
-            <button onClick={()=>{setEditUser(null);setEditForm(null);}} style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
+            <button onClick={()=>{setEditUser(null);setEditForm(null);}} title="Cancel editing" style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
             <button onClick={async ()=>{
               updateUser.mutate({id:editUser.id,...editForm});
               if (isSuperUser && !(editForm.roles||[]).includes('super_user')) {
                 updateWorkspaces.mutate({id:editUser.id,workspace_ids:editWorkspaceIds});
               }
-            }} disabled={updateUser.isPending||!editForm.name} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{updateUser.isPending?'Saving…':'Save Changes'}</button>
+            }} disabled={updateUser.isPending||!editForm.name} title="Save changes" style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{updateUser.isPending?'Saving…':'Save Changes'}</button>
           </div>
         </div>
       )}
@@ -455,7 +455,7 @@ function BrandingPanel() {
 
         {/* Save */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={handleSave} disabled={saving} style={{
+          <button onClick={handleSave} disabled={saving} title="Save changes" style={{
             padding: '8px 20px', background: 'var(--navy)', color: 'white', border: 'none',
             borderRadius: 7, fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700,
             cursor: saving ? 'not-allowed' : 'pointer',
@@ -579,7 +579,7 @@ function LopSectionsPanel() {
       <div style={{ marginBottom:12,display:'flex',gap:8 }}>
         <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder='Section name' style={{ height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontSize:13 }} />
         <input value={newDesc} onChange={e=>setNewDesc(e.target.value)} placeholder='Description' style={{ height:34,border:'1.5px solid var(--grey-border)',borderRadius:6,padding:'0 10px',fontSize:13 }} />
-        <button onClick={()=>{ if (!newName.trim()) return; addSection.mutate({ name:newName.trim(), description:newDesc.trim() }); setNewName(''); setNewDesc(''); }} style={{ padding:'7px 12px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,cursor:'pointer' }}>Add</button>
+        <button onClick={()=>{ if (!newName.trim()) return; addSection.mutate({ name:newName.trim(), description:newDesc.trim() }); setNewName(''); setNewDesc(''); }} title="Add new section" style={{ padding:'7px 12px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,cursor:'pointer' }}>Add</button>
       </div>
       <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,overflow:'hidden' }}>
         <table style={{ width:'100%',borderCollapse:'collapse' }}>
@@ -714,8 +714,8 @@ function HolidayPanel() {
                   <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)' }}><select value={newRow.holiday_type} onChange={e=>setNewRow({...newRow,holiday_type:e.target.value})} style={{ height:30,border:'1px solid var(--grey-border)',borderRadius:5,fontSize:12 }}><option>Public</option><option>Company</option><option>Optional</option></select></td>
                   <td style={{ padding:'6px 12px',borderBottom:'1px solid var(--grey-bg)' }}>
                     <div style={{ display:'flex',gap:4 }}>
-                      <button onClick={()=>createHoliday.mutate(newRow)} disabled={!newRow.name||!newRow.date} style={{ padding:'4px 10px',background:'var(--green)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer' }}>Save</button>
-                      <button onClick={()=>setNewRow(null)} style={{ padding:'4px 10px',background:'var(--grey-border)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer' }}>Cancel</button>
+                      <button onClick={()=>createHoliday.mutate(newRow)} disabled={!newRow.name||!newRow.date} title="Save holiday" style={{ padding:'4px 10px',background:'var(--green)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer' }}>Save</button>
+                      <button onClick={()=>setNewRow(null)} title="Cancel" style={{ padding:'4px 10px',background:'var(--grey-border)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer' }}>Cancel</button>
                     </div>
                   </td>
                 </tr>
@@ -730,7 +730,7 @@ function HolidayPanel() {
                   <td style={{ padding:'8px 12px',borderBottom:'1px solid var(--grey-bg)' }}>
                     <div style={{ display:'flex',gap:4 }}>
                       <button onClick={()=>updateHoliday.mutate({id:h.id,is_active:!h.is_active})} style={{ padding:'3px 8px',fontSize:11,border:'none',borderRadius:4,cursor:'pointer',background:h.is_active?'rgba(10,122,121,0.08)':'rgba(184,106,0,0.08)',color:h.is_active?'var(--green)':'var(--amber)' }}>{h.is_active?'Active':'Inactive'}</button>
-                      <button onClick={()=>deleteHoliday.mutate(h.id)} style={{ padding:'3px 8px',fontSize:11,background:'rgba(232,35,42,0.08)',color:'var(--red)',border:'none',borderRadius:4,cursor:'pointer' }}>Delete</button>
+                      <button onClick={()=>deleteHoliday.mutate(h.id)} title="Delete holiday" style={{ padding:'3px 8px',fontSize:11,background:'rgba(232,35,42,0.08)',color:'var(--red)',border:'none',borderRadius:4,cursor:'pointer' }}>Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -907,7 +907,7 @@ function WorkspaceModuleCard({ ws }) {
         })}
       </div>
       <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-        <button onClick={() => saveMut.mutate(selected)} disabled={saveMut.isPending} style={{ padding:'6px 16px',background:'var(--navy)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:saveMut.isPending?'not-allowed':'pointer' }}>
+        <button onClick={() => saveMut.mutate(selected)} disabled={saveMut.isPending} title="Save module changes" style={{ padding:'6px 16px',background:'var(--navy)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:saveMut.isPending?'not-allowed':'pointer' }}>
           {saveMut.isPending ? 'Saving…' : 'Save'}
         </button>
         {saved && <span style={{ fontSize:12,fontWeight:700,color:'var(--green)' }}>Saved!</span>}
