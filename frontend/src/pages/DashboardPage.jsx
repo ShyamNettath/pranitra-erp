@@ -37,7 +37,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--navy)', marginBottom: 3 }}>
-          Good morning, {user?.name?.split(' ')[0]} 👋
+          {(() => { const h = new Date().getHours(); return h >= 5 && h <= 11 ? 'Good morning' : h >= 12 && h <= 16 ? 'Good afternoon' : h >= 17 && h <= 20 ? 'Good evening' : 'Good night'; })()}, {user?.name?.split(' ')[0]} 👋
         </h1>
         <p style={{ fontSize: 13, color: 'var(--grey-text)' }}>
           {workspace?.name} · {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}

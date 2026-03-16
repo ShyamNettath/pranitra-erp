@@ -11,7 +11,6 @@ const ADMIN_SECTIONS = [
   { key:'roles',      label:'Roles & Permissions',   group:'Access & Users' },
   { key:'audit',      label:'Audit Log',             group:'Access & Users' },
   { key:'hr-employees', label:'HR Employees',        group:'Access & Users' },
-  { key:'modules',    label:'Workspace Modules',     group:'Access & Users' },
   { key:'complexity', label:'Complexity Settings',   group:'Project Config' },
   { key:'lop-sections', label:'LOP Sections', group:'Project Config' },
   { key:'holidays',   label:'Holiday List',          group:'Project Config' },
@@ -875,16 +874,51 @@ const ALL_MODULES = [
   { key:'resources',  label:'Resources' },
 ];
 
-function WorkspaceModulesPanel() {
+function WorkspaceModuleCard({ ws }) {
   const qc = useQueryClient();
+  const defaults = ALL_MODULES.map(m => m.key);
+  const [selected, setSelected] = useState(ws.modules || defaults);
+  const [saved, setSaved] = useState(false);
+
+  const saveMut = useMutation({
+    mutationFn: (modules) => api.put(`/workspaces/${ws.id}/modules`, { modules }).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries(['workspaces-modules']); setSaved(true); setTimeout(() => setSaved(false), 2000); },
+  });
+
+  const toggle = (key) => {
+    setSelected(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    setSaved(false);
+  };
+
+  return (
+    <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:'18px 20px' }}>
+      <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)',marginBottom:12 }}>{ws.name}</div>
+      <div style={{ display:'flex',flexWrap:'wrap',gap:10,marginBottom:14 }}>
+        {ALL_MODULES.map(m => {
+          const isDashboard = m.key === 'dashboard';
+          const checked = isDashboard || selected.includes(m.key);
+          return (
+            <label key={m.key} style={{ display:'flex',alignItems:'center',gap:6,fontSize:13,cursor:isDashboard?'default':'pointer',opacity:isDashboard?0.6:1 }}>
+              <input type="checkbox" checked={checked} disabled={isDashboard} onChange={() => toggle(m.key)} />
+              {m.label}
+            </label>
+          );
+        })}
+      </div>
+      <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+        <button onClick={() => saveMut.mutate(selected)} disabled={saveMut.isPending} style={{ padding:'6px 16px',background:'var(--navy)',color:'white',border:'none',borderRadius:7,fontFamily:'var(--font)',fontSize:12,fontWeight:700,cursor:saveMut.isPending?'not-allowed':'pointer' }}>
+          {saveMut.isPending ? 'Saving…' : 'Save'}
+        </button>
+        {saved && <span style={{ fontSize:12,fontWeight:700,color:'var(--green)' }}>Saved!</span>}
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceModulesPanel() {
   const { data: workspaces=[], isLoading } = useQuery({
     queryKey: ['workspaces-modules'],
     queryFn: () => api.get('/workspaces').then(r => r.data),
-  });
-
-  const updateMut = useMutation({
-    mutationFn: ({ id, modules }) => api.put(`/workspaces/${id}/modules`, { modules }).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries(['workspaces-modules']),
   });
 
   if (isLoading) return <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)' }}>Loading…</div>;
@@ -894,36 +928,7 @@ function WorkspaceModulesPanel() {
       <h2 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',marginBottom:3 }}>Workspace Modules</h2>
       <p style={{ fontSize:13,color:'var(--grey-text)',marginBottom:20 }}>Control which navigation items appear in each workspace sidebar.</p>
       <div style={{ display:'grid',gap:16 }}>
-        {workspaces.map(ws => {
-          const current = ws.modules || ALL_MODULES.map(m=>m.key);
-          return (
-            <div key={ws.id} style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:'18px 20px' }}>
-              <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)',marginBottom:12 }}>{ws.name}</div>
-              <div style={{ display:'flex',flexWrap:'wrap',gap:10 }}>
-                {ALL_MODULES.map(m => {
-                  const enabled = m.key==='dashboard' || current.includes(m.key);
-                  const isDashboard = m.key==='dashboard';
-                  return (
-                    <label key={m.key} style={{ display:'flex',alignItems:'center',gap:6,fontSize:13,cursor:isDashboard?'default':'pointer',opacity:isDashboard?0.6:1 }}>
-                      <input
-                        type="checkbox"
-                        checked={enabled}
-                        disabled={isDashboard || updateMut.isPending}
-                        onChange={() => {
-                          const next = enabled
-                            ? current.filter(k => k !== m.key)
-                            : [...current, m.key];
-                          updateMut.mutate({ id: ws.id, modules: next });
-                        }}
-                      />
-                      {m.label}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        {workspaces.map(ws => <WorkspaceModuleCard key={ws.id} ws={ws} />)}
       </div>
     </div>
   );
@@ -974,8 +979,8 @@ export default function AdminPage() {
         {section==='audit'      && <AuditPanel/>}
         {section==='sysinfo'    && <SysInfoPanel/>}
         {section==='hr-employees' && <HREmployeesPanel/>}
-        {section==='modules'    && <WorkspaceModulesPanel/>}
-        {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo','hr-employees','modules'].includes(section) && (
+        {section==='workspaces' && <WorkspaceModulesPanel/>}
+        {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo','hr-employees','workspaces'].includes(section) && (
           <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)',fontSize:14 }}>
             {visibleSections.find(s=>s.key===section)?.label} — available in full deployment.
           </div>
