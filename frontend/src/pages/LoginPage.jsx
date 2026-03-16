@@ -63,8 +63,8 @@ export default function LoginPage() {
         {/* ── Left panel — branding ── */}
         <div style={{
           width: '45%', display: 'flex',
-          flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          padding: '48px',
+          flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center',
+          padding: '48px', paddingRight: '60px',
         }}>
           {branding.logo_url ? (
             <img
@@ -82,7 +82,7 @@ export default function LoginPage() {
             </div>
           )}
           {branding.company_name && (
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--navy)', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--navy)', textAlign: 'center' }}>
               {branding.company_name}
             </div>
           )}
