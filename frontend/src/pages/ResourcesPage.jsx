@@ -5,31 +5,140 @@ import useAuthStore from '@/store/authStore';
 
 const LEVEL_COLORS = { strong:'var(--green)', proficient:'var(--navy)', learning:'var(--amber)' };
 
-function ServerStorageWidget() {
-  const { data } = useQuery({
-    queryKey: ['server-storage'],
-    queryFn: () => api.get('/admin/storage-usage').then(r => r.data),
-  });
-  if (!data) return null;
-  const pct = data.disk_usage_percent || 0;
-  const barColor = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--amber)' : 'var(--green)';
+const cardStyle = { background:'white', border:'1px solid var(--grey-border)', borderRadius:10, padding:'16px 20px' };
+const widgetTitle = { fontSize:11, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--grey-text)', marginBottom:12 };
+const statBox = { background:'var(--grey-bg)', borderRadius:8, padding:'10px 14px', textAlign:'center' };
+const statValue = { fontSize:20, fontWeight:700, color:'var(--navy)' };
+const statLabel = { fontSize:10, fontWeight:700, letterSpacing:0.5, textTransform:'uppercase', color:'var(--grey-text)', marginTop:4 };
+
+function ProgressBar({ pct }) {
+  const p = Math.min(100, Math.max(0, pct || 0));
+  const c = p > 90 ? 'var(--red)' : p > 70 ? 'var(--amber)' : 'var(--green)';
   return (
-    <div style={{ background:'white', border:'1px solid var(--grey-border)', borderRadius:10, padding:'16px 20px', marginBottom:16 }}>
-      <div style={{ fontSize:11, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--grey-text)', marginBottom:12 }}>Server Storage</div>
-      <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:10 }}>
-        <div style={{ flex:1 }}>
-          <div style={{ height:8, background:'var(--grey-bg)', borderRadius:4 }}>
-            <div style={{ width:`${Math.min(100, pct)}%`, height:'100%', background:barColor, borderRadius:4 }} />
-          </div>
+    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+      <div style={{ flex:1, height:8, background:'var(--grey-bg)', borderRadius:4 }}>
+        <div style={{ width:`${p}%`, height:'100%', background:c, borderRadius:4 }} />
+      </div>
+      <span style={{ fontSize:12, fontWeight:700, color:c, minWidth:36 }}>{p.toFixed(0)}%</span>
+    </div>
+  );
+}
+
+function ServerStorageWidget() {
+  const { data } = useQuery({ queryKey:['it-storage'], queryFn:()=>api.get('/admin/storage-usage').then(r=>r.data) });
+  if (!data) return null;
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>Server Storage</div>
+      <ProgressBar pct={data.disk_usage_percent} />
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginTop:12 }}>
+        <div style={statBox}><div style={statValue}>{data.total_disk_gb}</div><div style={statLabel}>Total GB</div></div>
+        <div style={statBox}><div style={statValue}>{data.used_disk_gb}</div><div style={statLabel}>Used GB</div></div>
+        <div style={statBox}><div style={statValue}>{data.free_disk_gb}</div><div style={statLabel}>Free GB</div></div>
+        <div style={statBox}><div style={statValue}>{data.uploads_total_mb.toFixed(1)}</div><div style={statLabel}>Uploads MB</div></div>
+      </div>
+    </div>
+  );
+}
+
+function ActiveUsersWidget() {
+  const { data } = useQuery({ queryKey:['it-users-summary'], queryFn:()=>api.get('/admin/users-summary').then(r=>r.data) });
+  if (!data) return null;
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>Active Users</div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+        <div style={statBox}><div style={statValue}>{data.total_users}</div><div style={statLabel}>Total</div></div>
+        <div style={statBox}><div style={statValue}>{data.active_today}</div><div style={statLabel}>Today</div></div>
+        <div style={statBox}><div style={statValue}>{data.active_this_week}</div><div style={statLabel}>This Week</div></div>
+        <div style={statBox}><div style={{...statValue, color:data.never_logged_in>0?'var(--amber)':'var(--navy)'}}>{data.never_logged_in}</div><div style={statLabel}>Never Logged In</div></div>
+      </div>
+    </div>
+  );
+}
+
+function SystemHealthWidget() {
+  const { data } = useQuery({ queryKey:['it-system-health'], queryFn:()=>api.get('/admin/system-health').then(r=>r.data) });
+  if (!data) return null;
+  const days = Math.floor(data.uptime_seconds / 86400);
+  const hours = Math.floor((data.uptime_seconds % 86400) / 3600);
+  const cpuPct = Math.min(100, Math.round((data.cpu_load / data.cpu_cores) * 100));
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>System Health</div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+        <div style={statBox}><div style={statValue}>{days}d {hours}h</div><div style={statLabel}>Uptime</div></div>
+        <div style={statBox}><div style={statValue}>{data.cpu_load}</div><div style={statLabel}>CPU Load ({data.cpu_cores} cores)</div></div>
+      </div>
+      <div style={{ marginBottom:6, fontSize:12, color:'var(--grey-text)' }}>Memory: {data.memory_used_mb} / {data.memory_total_mb} MB</div>
+      <ProgressBar pct={data.memory_percent} />
+      <div style={{ marginTop:10, marginBottom:6, fontSize:12, color:'var(--grey-text)' }}>CPU Utilisation</div>
+      <ProgressBar pct={cpuPct} />
+    </div>
+  );
+}
+
+function DbStatsWidget() {
+  const { data } = useQuery({ queryKey:['it-db-stats'], queryFn:()=>api.get('/admin/db-stats').then(r=>r.data) });
+  if (!data) return null;
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>Database</div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+        <div style={statBox}><div style={statValue}>{data.db_size}</div><div style={statLabel}>Total Size</div></div>
+        <div style={statBox}><div style={statValue}>{data.table_count}</div><div style={statLabel}>Tables</div></div>
+      </div>
+      <div style={{ fontSize:11, fontWeight:700, letterSpacing:0.5, textTransform:'uppercase', color:'var(--grey-text)', marginBottom:6 }}>Largest Tables</div>
+      {(data.largest_tables||[]).map(t=>(
+        <div key={t.name} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid var(--grey-bg)', fontSize:12 }}>
+          <span style={{ color:'var(--navy)', fontWeight:700 }}>{t.name}</span>
+          <span style={{ color:'var(--grey-text)' }}>{t.size}</span>
         </div>
-        <span style={{ fontSize:13, fontWeight:700, color:barColor, minWidth:40 }}>{pct.toFixed(0)}%</span>
-      </div>
-      <div style={{ display:'flex', gap:20, fontSize:12, color:'var(--grey-text)' }}>
-        <span>Total: <strong style={{ color:'var(--navy)' }}>{data.total_disk_gb} GB</strong></span>
-        <span>Used: <strong style={{ color:'var(--navy)' }}>{data.used_disk_gb} GB</strong></span>
-        <span>Free: <strong style={{ color:'var(--navy)' }}>{data.free_disk_gb} GB</strong></span>
-        <span>Uploads: <strong style={{ color:'var(--navy)' }}>{data.uploads_total_mb.toFixed(1)} MB</strong></span>
-      </div>
+      ))}
+    </div>
+  );
+}
+
+function FileStorageWidget() {
+  const { data } = useQuery({ queryKey:['it-storage'], queryFn:()=>api.get('/admin/storage-usage').then(r=>r.data) });
+  if (!data) return null;
+  const categories = [
+    { label:'Project Files', mb:data.project_files_mb },
+    { label:'Logos & Branding', mb:data.logos_mb },
+    { label:'User Avatars', mb:data.user_avatars_mb },
+    { label:'HR Files', mb:data.hr_files_mb },
+  ];
+  const totalMb = data.uploads_total_mb || 1;
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>File Storage Breakdown</div>
+      <div style={{ fontSize:14, fontWeight:700, color:'var(--navy)', marginBottom:12 }}>Total: {totalMb.toFixed(1)} MB</div>
+      {categories.map(c=>{
+        const pct = Math.round((c.mb / totalMb) * 100);
+        return (
+          <div key={c.label} style={{ marginBottom:8 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3 }}>
+              <span style={{ color:'var(--navy)', fontWeight:700 }}>{c.label}</span>
+              <span style={{ color:'var(--grey-text)' }}>{c.mb.toFixed(1)} MB ({pct}%)</span>
+            </div>
+            <div style={{ height:6, background:'var(--grey-bg)', borderRadius:3 }}>
+              <div style={{ width:`${pct}%`, height:'100%', background:'var(--navy)', borderRadius:3 }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ITDashboard() {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+      <ServerStorageWidget />
+      <ActiveUsersWidget />
+      <SystemHealthWidget />
+      <DbStatsWidget />
+      <FileStorageWidget />
     </div>
   );
 }
@@ -67,7 +176,7 @@ export default function ResourcesPage() {
 
   return (
     <div style={{ padding:28, display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
-      {isItWorkspace && <ServerStorageWidget />}
+      {isItWorkspace && <ITDashboard />}
       <div style={{ display:'flex', gap:20, flex:1, overflow:'hidden' }}>
       {/* List */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>

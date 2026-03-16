@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { writeAuditLog } = require('../utils/audit');
 const { execSync } = require('child_process');
 const path = require('path');
+const os = require('os');
 
 exports.getSettings = async (_req, res, next) => {
   try { return res.json(await db('system_settings').orderBy('key')); }
@@ -121,6 +122,71 @@ exports.getStorageUsage = async (_req, res, next) => {
       user_avatars_mb: userAvatarsMb,
       hr_files_mb: hrFilesMb,
       last_calculated_at: new Date().toISOString(),
+    });
+  } catch (err) { next(err); }
+};
+
+// ── Users summary ───────────────────────────────────────────────
+exports.getUsersSummary = async (_req, res, next) => {
+  try {
+    const total = await db('users').where({ is_deleted: false }).count('id as c').first();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const activeToday = await db('users').where({ is_deleted: false, is_active: true })
+      .where('last_login', '>=', today).count('id as c').first();
+    const activeWeek = await db('users').where({ is_deleted: false, is_active: true })
+      .where('last_login', '>=', weekAgo).count('id as c').first();
+    const neverLogged = await db('users').where({ is_deleted: false, is_active: true })
+      .whereNull('last_login').count('id as c').first();
+
+    return res.json({
+      total_users: parseInt(total.c),
+      active_today: parseInt(activeToday.c),
+      active_this_week: parseInt(activeWeek.c),
+      never_logged_in: parseInt(neverLogged.c),
+    });
+  } catch (err) { next(err); }
+};
+
+// ── System health ───────────────────────────────────────────────
+exports.getSystemHealth = async (_req, res, next) => {
+  try {
+    const mem = process.memoryUsage();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const loads = os.loadavg();
+
+    return res.json({
+      uptime_seconds: Math.floor(process.uptime()),
+      memory_used_mb: Math.round(usedMem / 1024 / 1024),
+      memory_total_mb: Math.round(totalMem / 1024 / 1024),
+      memory_percent: Math.round((usedMem / totalMem) * 100),
+      cpu_load: Math.round(loads[0] * 100) / 100,
+      cpu_cores: os.cpus().length,
+    });
+  } catch (err) { next(err); }
+};
+
+// ── Database stats ──────────────────────────────────────────────
+exports.getDbStats = async (_req, res, next) => {
+  try {
+    const sizeResult = await db.raw('SELECT pg_size_pretty(pg_database_size(current_database())) as db_size');
+    const countResult = await db.raw("SELECT count(*) as c FROM pg_tables WHERE schemaname = 'public'");
+    const largestResult = await db.raw(`
+      SELECT tablename as name, pg_size_pretty(pg_total_relation_size('public.' || tablename)) as size,
+             pg_total_relation_size('public.' || tablename) as raw_size
+      FROM pg_tables WHERE schemaname = 'public'
+      ORDER BY pg_total_relation_size('public.' || tablename) DESC LIMIT 5
+    `);
+
+    return res.json({
+      db_size: sizeResult.rows[0].db_size,
+      table_count: parseInt(countResult.rows[0].c),
+      largest_tables: largestResult.rows.map(r => ({ name: r.name, size: r.size })),
     });
   } catch (err) { next(err); }
 };
