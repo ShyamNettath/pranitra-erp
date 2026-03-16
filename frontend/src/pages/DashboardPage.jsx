@@ -1,112 +1,251 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import api from '@/services/api';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useAuthStore from '@/store/authStore';
 
-function KpiCard({ label, value, sub, color }) {
+const FONT = 'Arial, sans-serif';
+const NAVY = '#003264';
+const GREY = '#8A9BB0';
+const CARD = { background: '#F5F7FA', padding: 20, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' };
+const CARD_HEADER = { fontSize: 12, fontWeight: 700, letterSpacing: 1.2, color: NAVY, marginBottom: 14, fontFamily: FONT };
+
+function useQuote() {
+  const [quote, setQuote] = useState(null);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = `daily_quote_${today}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try { setQuote(JSON.parse(cached)); return; } catch {}
+    }
+
+    fetch('https://zenquotes.io/api/today')
+      .then(r => r.json())
+      .then(data => {
+        const item = Array.isArray(data) ? data[0] : data;
+        if (item && item.q) {
+          const q = { text: item.q, author: item.a };
+          localStorage.setItem(cacheKey, JSON.stringify(q));
+          setQuote(q);
+        }
+      })
+      .catch(() => {
+        // Try to find any previous cached quote
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('daily_quote_') && key !== cacheKey) {
+            try { setQuote(JSON.parse(localStorage.getItem(key))); return; } catch {}
+          }
+        }
+      });
+  }, []);
+
+  return quote;
+}
+
+function MeetingsCard() {
+  const [meetings, setMeetings] = useState(null);
+  const [error, setError] = useState(false);
+  const token = localStorage.getItem('ms_access_token');
+
+  useEffect(() => {
+    if (!token) return;
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+    fetch(`https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start}&endDateTime=${end}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(data => setMeetings(data.value || []))
+      .catch(() => setError(true));
+  }, [token]);
+
   return (
-    <div style={{ background: 'white', border: '1px solid var(--grey-border)', borderRadius: 10, padding: '18px 20px', borderTop: `3px solid ${color}` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--grey-text)', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--navy)', marginBottom: 4 }}>{value ?? '—'}</div>
-      {sub && <div style={{ fontSize: 12, color: 'var(--grey-text)' }}>{sub}</div>}
+    <div style={CARD}>
+      <div style={CARD_HEADER}>Your Meetings</div>
+      {!token ? (
+        <button
+          onClick={() => console.log('MS OAuth not yet configured')}
+          title="Connect your Outlook calendar"
+          style={{ padding: '10px 20px', background: NAVY, color: 'white', border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Connect Outlook Calendar
+        </button>
+      ) : error ? (
+        <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Could Not Load Meetings</div>
+      ) : meetings === null ? (
+        <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Loading...</div>
+      ) : meetings.length === 0 ? (
+        <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>No Meetings Today</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {meetings.map((m, i) => {
+            const time = m.start?.dateTime ? new Date(m.start.dateTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontFamily: FONT }}>
+                <span style={{ fontWeight: 700, color: NAVY, minWidth: 50 }}>{time}</span>
+                <span style={{ color: '#333' }}>{m.subject || 'Untitled'}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-const STATUS_COLORS = { active: '#4AE08A', pending_approval: '#B86A00', draft: '#B0BAC8', on_hold: '#E8232A', completed: '#0A7A79' };
-const STATUS_LABELS = { active: 'Active', pending_approval: 'Pending Approval', draft: 'Draft', on_hold: 'On Hold', completed: 'Completed' };
+function TodoCard() {
+  const { user } = useAuthStore();
+  const storageKey = `todos_${user?.id}`;
+  const [todos, setTodos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey)) || []; } catch { return []; }
+  });
+  const [input, setInput] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(todos));
+  }, [todos, storageKey]);
+
+  function addTodo() {
+    const text = input.trim();
+    if (!text) return;
+    setTodos(prev => [...prev, { id: Date.now(), text, done: false }]);
+    setInput('');
+  }
+
+  function toggleTodo(id) {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  }
+
+  function deleteTodo(id) {
+    setTodos(prev => prev.filter(t => t.id !== id));
+  }
+
+  const incomplete = todos.filter(t => !t.done).length;
+
+  return (
+    <div style={CARD}>
+      <div style={CARD_HEADER}>To-Do {incomplete > 0 ? `(${incomplete})` : ''}</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addTodo()}
+          placeholder="Add a task..."
+          title="Type a new task"
+          style={{ flex: 1, height: 34, border: '1.5px solid #D8DDE6', borderRadius: 6, padding: '0 10px', fontFamily: FONT, fontSize: 13, color: NAVY, outline: 'none' }}
+        />
+        <button onClick={addTodo} title="Add task" style={{ padding: '0 14px', height: 34, background: NAVY, color: 'white', border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          Add
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+        {todos.map(t => (
+          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #E8ECF0' }}>
+            <input type="checkbox" checked={t.done} onChange={() => toggleTodo(t.id)} style={{ cursor: 'pointer', accentColor: NAVY }} />
+            <span style={{ flex: 1, fontSize: 13, fontFamily: FONT, color: t.done ? GREY : '#333', textDecoration: t.done ? 'line-through' : 'none' }}>{t.text}</span>
+            <button onClick={() => deleteTodo(t.id)} title="Delete task" style={{ background: 'none', border: 'none', color: GREY, cursor: 'pointer', fontSize: 16, padding: '0 4px', fontFamily: FONT }}>×</button>
+          </div>
+        ))}
+        {todos.length === 0 && <div style={{ fontSize: 13, color: GREY, fontFamily: FONT, padding: '8px 0' }}>No Tasks Yet</div>}
+      </div>
+      <button
+        onClick={() => console.log('Outlook Tasks sync not yet configured')}
+        title="Sync tasks from Outlook"
+        style={{ marginTop: 12, padding: '6px 14px', background: '#E8ECF0', color: GREY, border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+      >
+        Sync Outlook Tasks
+      </button>
+    </div>
+  );
+}
+
+function NotesCard() {
+  const { user } = useAuthStore();
+  const storageKey = `notes_${user?.id}`;
+  const [notes, setNotes] = useState(() => localStorage.getItem(storageKey) || '');
+  const [saved, setSaved] = useState(false);
+  const timerRef = useRef(null);
+
+  const handleChange = useCallback((e) => {
+    const val = e.target.value;
+    setNotes(val);
+    setSaved(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      localStorage.setItem(storageKey, val);
+      setSaved(true);
+    }, 500);
+  }, [storageKey]);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  return (
+    <div style={CARD}>
+      <div style={CARD_HEADER}>Notes</div>
+      <textarea
+        value={notes}
+        onChange={handleChange}
+        placeholder="Write your notes here..."
+        title="Personal notes"
+        rows={6}
+        style={{ width: '100%', border: '1.5px solid #D8DDE6', borderRadius: 6, padding: 10, fontFamily: FONT, fontSize: 13, color: NAVY, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+      />
+      {saved && <div style={{ fontSize: 11, color: GREY, marginTop: 4, fontFamily: FONT }}>Saved</div>}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { workspace, user } = useAuthStore();
-  const navigate = useNavigate();
+  const quote = useQuote();
 
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects', workspace?.id],
-    queryFn: () => api.get('/projects', { params: { workspace_id: workspace?.id } }).then(r => r.data),
-    enabled: !!workspace?.id,
-  });
-
-  const active   = projects.filter(p => p.status === 'active').length;
-  const pending  = projects.filter(p => p.status === 'pending_approval').length;
-  const onHold   = projects.filter(p => p.status === 'on_hold').length;
-  const recent   = [...projects].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 6);
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h >= 5 && h <= 11) return 'Good Morning';
+    if (h >= 12 && h <= 16) return 'Good Afternoon';
+    if (h >= 17 && h <= 20) return 'Good Evening';
+    return 'Good Night';
+  })();
 
   return (
-    <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ padding: 28, fontFamily: FONT, height: '100%', boxSizing: 'border-box' }}>
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--navy)', marginBottom: 3 }}>
-          {(() => { const h = new Date().getHours(); return h >= 5 && h <= 11 ? 'Good morning' : h >= 12 && h <= 16 ? 'Good afternoon' : h >= 17 && h <= 20 ? 'Good evening' : 'Good night'; })()}, {user?.name?.split(' ')[0]} 👋
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 3, fontFamily: FONT }}>
+          {greeting}, {user?.name?.split(' ')[0]}
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--grey-text)' }}>
+        <p style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>
           {workspace?.name} · {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 
-      {/* KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <KpiCard label="Total Projects"    value={projects.length}  sub="in this workspace"     color="var(--navy)" />
-        <KpiCard label="Active Projects"   value={active}           sub="currently running"     color="var(--green)" />
-        <KpiCard label="Pending Approval"  value={pending}          sub="awaiting Director"     color="var(--amber)" />
-        <KpiCard label="On Hold"           value={onHold}           sub="paused projects"       color="var(--red)" />
-      </div>
-
-      {/* Recent projects */}
-      <div style={{ background: 'white', border: '1px solid var(--grey-border)', borderRadius: 10, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--grey-border)' }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)' }}>Recent Projects</div>
-            <div style={{ fontSize: 12, color: 'var(--grey-text)', marginTop: 2 }}>Recently updated in your workspace</div>
-          </div>
-          <button onClick={() => navigate('/projects')} title="View all projects" style={{ padding: '6px 14px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-            View All
-          </button>
+      {/* 2-column grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '40% 60%', gap: 20, alignItems: 'start' }}>
+        {/* Left — Quote */}
+        <div style={{ ...CARD, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 300 }}>
+          {quote ? (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 700, color: NAVY, lineHeight: 1.5, fontFamily: FONT, textAlign: 'center' }}>
+                &ldquo;{quote.text}&rdquo;
+              </div>
+              <div style={{ fontSize: 13, color: GREY, fontStyle: 'italic', textAlign: 'center', marginTop: 16, fontFamily: FONT }}>
+                — {quote.author}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 14, color: GREY, textAlign: 'center', fontFamily: FONT }}>Loading Quote...</div>
+          )}
         </div>
 
-        {recent.length === 0 ? (
-          <div style={{ padding: '40px 18px', textAlign: 'center', color: 'var(--grey-text)', fontSize: 13 }}>
-            No projects yet. <span onClick={() => navigate('/projects')} title="Create a new project" style={{ color: 'var(--navy)', cursor: 'pointer', fontWeight: 700 }}>Create your first project →</span>
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['Project', 'Status', 'Project Manager', 'Start Date', 'End Date', 'Progress'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--grey-text)', textAlign: 'left', background: 'var(--grey-bg)', borderBottom: '1.5px solid var(--grey-border)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map(p => (
-                <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/projects/${p.id}`)}>
-                  <td style={{ padding: '11px 12px', fontWeight: 700, color: 'var(--navy)', borderBottom: '1px solid var(--grey-bg)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color || 'var(--navy)', flexShrink: 0 }} />
-                      {p.name}
-                    </div>
-                  </td>
-                  <td style={{ padding: '11px 12px', borderBottom: '1px solid var(--grey-bg)' }}>
-                    <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${STATUS_COLORS[p.status] || '#B0BAC8'}22`, color: STATUS_COLORS[p.status] || '#B0BAC8' }}>
-                      {STATUS_LABELS[p.status] || p.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.pm_name || '—'}</td>
-                  <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.start_date ? new Date(p.start_date).toLocaleDateString('en-GB') : '—'}</td>
-                  <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.end_date ? new Date(p.end_date).toLocaleDateString('en-GB') : '—'}</td>
-                  <td style={{ padding: '11px 12px', borderBottom: '1px solid var(--grey-bg)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, height: 6, background: 'var(--grey-bg)', borderRadius: 3 }}>
-                        <div style={{ width: `${p.progress_pct || 0}%`, height: '100%', background: 'var(--navy)', borderRadius: 3 }} />
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--navy)', whiteSpace: 'nowrap' }}>{p.progress_pct || 0}%</span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {/* Right — 3 stacked cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <MeetingsCard />
+          <TodoCard />
+          <NotesCard />
+        </div>
       </div>
     </div>
   );

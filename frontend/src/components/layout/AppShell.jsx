@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '@/store/authStore';
 import api from '@/services/api';
 
@@ -23,6 +23,10 @@ export default function AppShell() {
   const enabledModules = workspace?.modules;
   const NAV = ALL_NAV.filter(item => item.key === 'dashboard' || !enabledModules || enabledModules.includes(item.key));
   const adminLabel = (isSuperUser || isItWorkspace) ? 'Admin Panel' : 'Settings';
+
+  const location = useLocation();
+  const isEngineering = workspace?.slug === 'engineering';
+  const [projectsExpanded, setProjectsExpanded] = useState(location.pathname.startsWith('/projects') || location.pathname.startsWith('/tasks') || location.pathname.startsWith('/gantt'));
 
   // User dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -194,20 +198,76 @@ export default function AppShell() {
           overflow: 'hidden', transition: 'width 0.2s',
         }}>
           <div style={{ padding: '16px 12px', flex: 1 }}>
-            {NAV.map(({ to, label, icon }) => (
-              <NavLink key={to} to={to} end={to === '/'} style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 10px', borderRadius: 7, marginBottom: 1,
-                fontFamily: 'var(--font)', fontSize: 13,
-                color: isActive ? 'var(--navy)' : 'var(--grey-text)',
-                background: isActive ? 'var(--navy-xlight)' : 'transparent',
-                fontWeight: isActive ? 700 : 400,
-                textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden',
-              })}>
-                <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
-                {sidebarOpen && label}
-              </NavLink>
-            ))}
+            {NAV.map(({ to, label, icon, key }) => {
+              const isProjectsParent = key === 'projects' && isEngineering;
+              const projectSubItems = [
+                { to: '/projects', label: 'Overview' },
+                { to: '/tasks', label: 'Tasks' },
+                { to: '/gantt', label: 'Gantt' },
+              ];
+              const projectsActive = location.pathname.startsWith('/projects') || location.pathname.startsWith('/tasks') || location.pathname.startsWith('/gantt');
+
+              if (isProjectsParent) {
+                // Skip tasks and gantt from main nav — they are sub-items
+                return (
+                  <div key={to}>
+                    <div
+                      onClick={() => setProjectsExpanded(!projectsExpanded)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '9px 10px', borderRadius: 7, marginBottom: 1,
+                        fontFamily: 'var(--font)', fontSize: 13,
+                        color: projectsActive ? 'var(--navy)' : 'var(--grey-text)',
+                        background: projectsActive && !projectsExpanded ? 'var(--navy-xlight)' : 'transparent',
+                        fontWeight: projectsActive ? 700 : 400,
+                        cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', userSelect: 'none',
+                      }}
+                    >
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
+                      {sidebarOpen && <>
+                        <span style={{ flex: 1 }}>{label}</span>
+                        <span style={{ fontSize: 10, transition: 'transform 0.2s', transform: projectsExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                      </>}
+                    </div>
+                    {projectsExpanded && sidebarOpen && (
+                      <div style={{ marginLeft: 24 }}>
+                        {projectSubItems.map(sub => (
+                          <NavLink key={sub.to} to={sub.to} end={sub.to === '/projects'} style={({ isActive }) => ({
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '7px 10px', borderRadius: 6, marginBottom: 1,
+                            fontFamily: 'var(--font)', fontSize: 12,
+                            color: isActive ? 'var(--navy)' : 'var(--grey-text)',
+                            background: isActive ? 'var(--navy-xlight)' : 'transparent',
+                            fontWeight: isActive ? 700 : 400,
+                            textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden',
+                          })}>
+                            {sub.label}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // For engineering workspace, skip tasks and gantt from main nav (they are sub-items of Projects)
+              if (isEngineering && (key === 'tasks' || key === 'gantt')) return null;
+
+              return (
+                <NavLink key={to} to={to} end={to === '/'} style={({ isActive }) => ({
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 10px', borderRadius: 7, marginBottom: 1,
+                  fontFamily: 'var(--font)', fontSize: 13,
+                  color: isActive ? 'var(--navy)' : 'var(--grey-text)',
+                  background: isActive ? 'var(--navy-xlight)' : 'transparent',
+                  fontWeight: isActive ? 700 : 400,
+                  textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden',
+                })}>
+                  <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
+                  {sidebarOpen && label}
+                </NavLink>
+              );
+            })}
 
             {/* Admin Panel — visible to admin / super_user in any workspace */}
             {isAdminOrSuper && (
