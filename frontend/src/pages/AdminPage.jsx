@@ -19,12 +19,12 @@ const ADMIN_SECTIONS = [
   { key:'sysinfo',    label:'System Info',           group:'System' },
 ];
 
-const ROLES_ALL = ['admin','director','project_manager','team_member','client'];
+const ROLES_ALL = ['super_user','admin','director','project_manager','team_member','client'];
 const REPORTS_ALL = ['project_performance','effort_variance','schedule_variance','budget_variance','rework_analysis','escalations_log','associate_productivity','rework_hours','efficiency_analysis','idle_time','lessons_learned'];
 const REPORT_LABELS = { project_performance:'Project Performance',effort_variance:'Effort Variance',schedule_variance:'Schedule Variance',budget_variance:'Budget Variance',rework_analysis:'Rework Analysis',escalations_log:'Escalations Log',associate_productivity:'Associate Productivity',rework_hours:'Rework Hours',efficiency_analysis:'Efficiency Analysis',idle_time:'Idle Time',lessons_learned:'Lessons Learned' };
-const ROLE_LABELS = { admin:'Admin',director:'Director',project_manager:'Project Mgr',team_member:'Member',client:'Client' };
+const ROLE_LABELS = { super_user:'Super User',admin:'Admin',director:'Director',project_manager:'Project Mgr',team_member:'Member',client:'Client' };
 
-const ROLE_COLORS = { admin:'var(--red)',director:'var(--navy)',project_manager:'var(--purple)',team_member:'var(--green)',client:'var(--amber)' };
+const ROLE_COLORS = { super_user:'#333',admin:'var(--red)',director:'var(--navy)',project_manager:'var(--purple)',team_member:'var(--green)',client:'var(--amber)' };
 
 function Toggle({ on, onChange }) {
   return (
@@ -188,7 +188,10 @@ function BulkUploadModal({ onClose }) {
 }
 
 function UsersPanel() {
+  const { user: currentUser } = useAuthStore();
+  const isSuperUser = currentUser?.roles?.includes('super_user');
   const { data: users=[], isLoading } = useQuery({ queryKey:['admin-users'], queryFn:()=>api.get('/users').then(r=>r.data) });
+  const { data: allWorkspaces=[] } = useQuery({ queryKey:['all-workspaces'], queryFn:()=>api.get('/workspaces').then(r=>r.data) });
   const qc = useQueryClient();
 
   // Create form
@@ -200,7 +203,10 @@ function UsersPanel() {
   // Edit
   const [editUser, setEditUser] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [editWorkspaceIds, setEditWorkspaceIds] = useState([]);
+  const [wsLoading, setWsLoading] = useState(false);
   const updateUser = useMutation({ mutationFn:({id,...data})=>api.put(`/users/${id}`,data).then(r=>r.data), onSuccess:()=>{ qc.invalidateQueries(['admin-users']); setEditUser(null); setEditForm(null); } });
+  const updateWorkspaces = useMutation({ mutationFn:({id,workspace_ids})=>api.put(`/users/${id}/workspaces`,{workspace_ids}).then(r=>r.data) });
 
   // Bulk upload
   const [showBulk, setShowBulk] = useState(false);
@@ -208,10 +214,17 @@ function UsersPanel() {
   const deactivate = useMutation({ mutationFn:id=>api.post(`/users/${id}/deactivate`), onSuccess:()=>qc.invalidateQueries(['admin-users']) });
   const reactivate = useMutation({ mutationFn:id=>api.post(`/users/${id}/reactivate`), onSuccess:()=>qc.invalidateQueries(['admin-users']) });
 
-  function openEdit(u) {
+  async function openEdit(u) {
     setEditUser(u);
     setEditForm({ name:u.name||'', email:u.email||'', employee_id:u.employee_id||'', designation:u.designation||'', location:u.location||'', team:u.team||'', contact_number:u.contact_number||'', roles:u.roles||['team_member'] });
     setShowCreate(false);
+    // Fetch user's workspace assignments
+    setWsLoading(true);
+    try {
+      const { data } = await api.get(`/users/${u.id}`);
+      setEditWorkspaceIds((data.workspaces||[]).map(w=>w.id));
+    } catch { setEditWorkspaceIds([]); }
+    setWsLoading(false);
   }
 
   const thStyle = { padding:'8px 10px',fontSize:10,fontWeight:700,letterSpacing:0.8,textTransform:'uppercase',color:'var(--grey-text)',textAlign:'left',background:'var(--grey-bg)',borderBottom:'1.5px solid var(--grey-border)',whiteSpace:'nowrap' };
@@ -249,9 +262,44 @@ function UsersPanel() {
             <button onClick={()=>{setEditUser(null);setEditForm(null);}} style={{ background:'none',border:'none',fontSize:16,cursor:'pointer',color:'var(--grey-text)' }}>×</button>
           </div>
           <UserFormFields form={editForm} setForm={setEditForm} />
+
+          {/* Workspace Access */}
+          <div style={{ marginBottom:12,padding:'12px 14px',border:'1px solid var(--grey-border)',borderRadius:8,background:'var(--grey-bg)' }}>
+            <label style={{ ...uLabelStyle,marginBottom:8 }}>Workspace Access</label>
+            {wsLoading ? (
+              <div style={{ fontSize:12,color:'var(--grey-text)' }}>Loading…</div>
+            ) : (
+              <div style={{ display:'flex',flexDirection:'column',gap:6 }}>
+                {(() => {
+                  const editUserIsSuperUser = (editForm.roles||[]).includes('super_user');
+                  return allWorkspaces.map(ws => (
+                    <label key={ws.id} style={{ display:'flex',alignItems:'center',gap:8,fontSize:12,cursor:editUserIsSuperUser?'not-allowed':'pointer',color:editUserIsSuperUser?'var(--grey-text)':'var(--navy)' }}>
+                      <input
+                        type="checkbox"
+                        checked={editUserIsSuperUser || editWorkspaceIds.includes(ws.id)}
+                        disabled={editUserIsSuperUser}
+                        onChange={e => {
+                          if (e.target.checked) setEditWorkspaceIds(prev=>[...prev,ws.id]);
+                          else setEditWorkspaceIds(prev=>prev.filter(id=>id!==ws.id));
+                        }}
+                      />
+                      {ws.name}
+                      {editUserIsSuperUser && <span style={{ fontSize:10,color:'var(--grey-text)',fontStyle:'italic' }}>(super_user — all workspaces)</span>}
+                    </label>
+                  ));
+                })()}
+              </div>
+            )}
+          </div>
+
           <div style={{ display:'flex',gap:8 }}>
             <button onClick={()=>{setEditUser(null);setEditForm(null);}} style={{ padding:'6px 14px',background:'white',border:'1.5px solid var(--grey-border)',borderRadius:6,fontFamily:'var(--font)',fontSize:13,cursor:'pointer' }}>Cancel</button>
-            <button onClick={()=>updateUser.mutate({id:editUser.id,...editForm})} disabled={updateUser.isPending||!editForm.name} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{updateUser.isPending?'Saving…':'Save Changes'}</button>
+            <button onClick={async ()=>{
+              updateUser.mutate({id:editUser.id,...editForm});
+              if (isSuperUser && !(editForm.roles||[]).includes('super_user')) {
+                updateWorkspaces.mutate({id:editUser.id,workspace_ids:editWorkspaceIds});
+              }
+            }} disabled={updateUser.isPending||!editForm.name} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:13,fontWeight:700,cursor:'pointer' }}>{updateUser.isPending?'Saving…':'Save Changes'}</button>
           </div>
         </div>
       )}

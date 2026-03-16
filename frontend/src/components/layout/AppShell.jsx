@@ -85,21 +85,23 @@ export default function AppShell() {
 
         {/* Right controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          {/* Workspace switcher */}
-          <select
-            value={workspace?.id || ''}
-            onChange={(e) => selectWorkspace(e.target.value).then(() => navigate('/'))}
-            style={{
-              padding: '6px 12px', background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
-              color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font)', fontSize: 12,
-              cursor: 'pointer',
-            }}
-          >
-            {workspaces.map((ws) => (
-              <option key={ws.id} value={ws.id}>{ws.name}</option>
-            ))}
-          </select>
+          {/* Workspace switcher — hidden for single-workspace users */}
+          {workspaces.length > 1 && (
+            <select
+              value={workspace?.id || ''}
+              onChange={(e) => selectWorkspace(e.target.value).then(() => navigate('/'))}
+              style={{
+                padding: '6px 12px', background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
+                color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font)', fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              {workspaces.map((ws) => (
+                <option key={ws.id} value={ws.id}>{ws.name}</option>
+              ))}
+            </select>
+          )}
 
           {/* User dropdown */}
           <div ref={dropdownRef} style={{ position: 'relative' }}>

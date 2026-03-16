@@ -77,62 +77,74 @@ export default function WorkspacePage() {
               Welcome back, {user?.name?.split(' ')[0]}. Choose the workspace you want to enter.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-              {workspaces.map((ws, idx) => (
-                <div
-                  key={ws.id}
-                  onClick={() => setSelected(ws.id)}
+            {workspaces.length === 0 ? (
+              <div style={{ padding: '28px 20px', background: 'rgba(232,35,42,0.05)', border: '1.5px solid rgba(232,35,42,0.15)', borderRadius: 10, textAlign: 'center' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--navy)', marginBottom: 8 }}>No Workspace Assigned</div>
+                <p style={{ fontSize: 13, color: 'var(--grey-text)', lineHeight: 1.6 }}>
+                  Your account does not have access to any workspace yet. Please contact your administrator to get workspace access.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+                  {workspaces.map((ws, idx) => (
+                    <div
+                      key={ws.id}
+                      onClick={() => setSelected(ws.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        padding: '16px 18px', border: `2px solid ${selected === ws.id ? 'var(--navy)' : 'var(--grey-border)'}`,
+                        borderRadius: 10, cursor: 'pointer',
+                        background: selected === ws.id ? 'var(--navy-xlight)' : 'white',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 10,
+                        background: ws.color || WS_COLORS[idx % WS_COLORS.length],
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 16, fontWeight: 700, color: 'white', flexShrink: 0,
+                      }}>
+                        {ws.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)', marginBottom: 2 }}>{ws.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--grey-text)' }}>{ws.slug}</div>
+                      </div>
+                      <div style={{
+                        width: 20, height: 20, borderRadius: '50%',
+                        border: `2px solid ${selected === ws.id ? 'var(--navy)' : 'var(--grey-border)'}`,
+                        background: selected === ws.id ? 'var(--navy)' : 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        {selected === ws.id && <span style={{ color: 'white', fontSize: 10 }}>✓</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {error && (
+                  <div style={{ padding: '10px 14px', background: 'rgba(232,35,42,0.08)', border: '1px solid rgba(232,35,42,0.2)', borderRadius: 7, marginBottom: 16, fontSize: 13, color: 'var(--red)' }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleContinue}
+                  disabled={!selected || isLoading}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '16px 18px', border: `2px solid ${selected === ws.id ? 'var(--navy)' : 'var(--grey-border)'}`,
-                    borderRadius: 10, cursor: 'pointer',
-                    background: selected === ws.id ? 'var(--navy-xlight)' : 'white',
-                    transition: 'all 0.15s',
+                    width: '100%', height: 46,
+                    background: selected ? 'var(--navy)' : 'var(--grey-border)',
+                    color: 'white', border: 'none', borderRadius: 8,
+                    fontFamily: 'var(--font)', fontSize: 14, fontWeight: 700,
+                    cursor: selected ? 'pointer' : 'not-allowed', transition: 'background 0.2s',
                   }}
                 >
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 10,
-                    background: ws.color || WS_COLORS[idx % WS_COLORS.length],
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, fontWeight: 700, color: 'white', flexShrink: 0,
-                  }}>
-                    {ws.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)', marginBottom: 2 }}>{ws.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--grey-text)' }}>{ws.slug}</div>
-                  </div>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: '50%',
-                    border: `2px solid ${selected === ws.id ? 'var(--navy)' : 'var(--grey-border)'}`,
-                    background: selected === ws.id ? 'var(--navy)' : 'white',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>
-                    {selected === ws.id && <span style={{ color: 'white', fontSize: 10 }}>✓</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {error && (
-              <div style={{ padding: '10px 14px', background: 'rgba(232,35,42,0.08)', border: '1px solid rgba(232,35,42,0.2)', borderRadius: 7, marginBottom: 16, fontSize: 13, color: 'var(--red)' }}>
-                {error}
-              </div>
+                  {isLoading ? 'Connecting…' : 'Enter Workspace'}
+                </button>
+              </>
             )}
-
-            <button
-              onClick={handleContinue}
-              disabled={!selected || isLoading}
-              style={{
-                width: '100%', height: 46,
-                background: selected ? 'var(--navy)' : 'var(--grey-border)',
-                color: 'white', border: 'none', borderRadius: 8,
-                fontFamily: 'var(--font)', fontSize: 14, fontWeight: 700,
-                cursor: selected ? 'pointer' : 'not-allowed', transition: 'background 0.2s',
-              }}
-            >
-              {isLoading ? 'Connecting…' : 'Enter Workspace'}
-            </button>
           </div>
         </div>
       </div>

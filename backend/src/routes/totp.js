@@ -60,10 +60,16 @@ router.post('/verify', async (req, res, next) => {
 
     // Issue JWT tokens (same logic as authController login completion)
     const roles = (await db('user_roles').where({ user_id: userId }).select('role')).map(r => r.role);
-    const workspaces = await db('workspace_members as wm')
-      .join('workspaces as w', 'w.id', 'wm.workspace_id')
-      .where({ 'wm.user_id': userId, 'wm.is_active': true, 'w.is_active': true })
-      .select('w.id', 'w.name', 'w.slug', 'w.color');
+    // super_user sees all workspaces; everyone else sees only assigned
+    let workspaces;
+    if (roles.includes('super_user')) {
+      workspaces = await db('workspaces').where({ is_active: true }).select('id', 'name', 'slug', 'color').orderBy('name');
+    } else {
+      workspaces = await db('workspace_members as wm')
+        .join('workspaces as w', 'w.id', 'wm.workspace_id')
+        .where({ 'wm.user_id': userId, 'wm.is_active': true, 'w.is_active': true })
+        .select('w.id', 'w.name', 'w.slug', 'w.color').orderBy('w.name');
+    }
 
     const accessToken = jwt.sign(
       { sub: userId, roles, ws: null },

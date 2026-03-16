@@ -386,11 +386,24 @@ function CreateProjectModal({ onClose }) {
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { workspace, user } = useAuthStore();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
   const canCreate = user?.roles?.some(r => ['project_manager', 'admin'].includes(r));
+  const isSuperUser = user?.roles?.includes('super_user');
+
+  const approveMut = useMutation({
+    mutationFn: (id) => api.patch(`/projects/${id}/approve`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries(['projects']),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id) => api.delete(`/projects/${id}/super-delete`).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries(['projects']); setDeleteConfirm(null); },
+  });
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects', workspace?.id, search, statusFilter],
@@ -439,7 +452,7 @@ export default function ProjectsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Project', 'Status', 'Sections', 'Project Manager', 'Start', 'End', 'Budget', 'Progress', ''].map(h => (
+                {['Project', 'Status', 'Sections', 'Project Manager', 'Start', 'End', 'Budget', 'Progress', ...(isSuperUser ? ['Actions'] : ['']),].map(h => (
                   <th key={h} style={{ padding: '8px 12px', fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--grey-text)', textAlign: 'left', background: 'var(--grey-bg)', borderBottom: '1.5px solid var(--grey-border)' }}>{h}</th>
                 ))}
               </tr>
@@ -480,7 +493,23 @@ export default function ProjectsPage() {
                       </div>
                     </td>
                     <td style={{ padding: '11px 12px', borderBottom: '1px solid var(--grey-bg)' }}>
-                      <span style={{ fontSize: 18, color: 'var(--grey-text)' }}>›</span>
+                      {isSuperUser ? (
+                        <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+                          {p.status === 'pending_approval' && (
+                            <button
+                              onClick={() => approveMut.mutate(p.id)}
+                              disabled={approveMut.isPending}
+                              style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: 'none', background: 'rgba(10,122,121,0.1)', color: 'var(--green)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                            >Approve</button>
+                          )}
+                          <button
+                            onClick={() => setDeleteConfirm({ id: p.id, name: p.name })}
+                            style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: 'none', background: 'rgba(232,35,42,0.08)', color: 'var(--red)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                          >Delete</button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 18, color: 'var(--grey-text)' }}>›</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -489,6 +518,24 @@ export default function ProjectsPage() {
           </table>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }} onClick={() => setDeleteConfirm(null)}>
+          <div style={{ background: 'white', borderRadius: 12, padding: 28, width: 420, boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--navy)', marginBottom: 12 }}>Delete Project</h3>
+            <p style={{ fontSize: 13, color: 'var(--grey-text)', lineHeight: 1.6, marginBottom: 20 }}>
+              Are you sure you want to delete <strong style={{ color: 'var(--navy)' }}>{deleteConfirm.name}</strong>? This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeleteConfirm(null)} style={{ padding: '8px 16px', background: 'white', border: '1.5px solid var(--grey-border)', borderRadius: 7, fontFamily: 'var(--font)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => deleteMut.mutate(deleteConfirm.id)} disabled={deleteMut.isPending} style={{ padding: '8px 16px', background: 'var(--red)', color: 'white', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700, cursor: deleteMut.isPending ? 'not-allowed' : 'pointer' }}>
+                {deleteMut.isPending ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

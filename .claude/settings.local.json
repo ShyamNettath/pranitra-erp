@@ -5,7 +5,9 @@
       "Bash(cd /c/ERP/pranitra/backend && npm install)",
       "Bash(npm install:*)",
       "Bash(node src/config/migrate-project-fields.js)",
-      "Bash(cd C:/ERP/pranitra && node -e \"try { require\\('fs'\\).readFileSync\\('frontend/src/pages/ProjectsPage.jsx', 'utf8'\\); console.log\\('File reads OK, length:', require\\('fs'\\).readFileSync\\('frontend/src/pages/ProjectsPage.jsx','utf8'\\).length\\); } catch\\(e\\) { console.error\\(e.message\\); }\")"
+      "Bash(cd C:/ERP/pranitra && node -e \"try { require\\('fs'\\).readFileSync\\('frontend/src/pages/ProjectsPage.jsx', 'utf8'\\); console.log\\('File reads OK, length:', require\\('fs'\\).readFileSync\\('frontend/src/pages/ProjectsPage.jsx','utf8'\\).length\\); } catch\\(e\\) { console.error\\(e.message\\); }\")",
+      "Bash(grep -n \"requireWorkspaceMember\" /c/ERP/pranitra/backend/src/routes/*.js)",
+      "Bash(ls -la /c/ERP/pranitra/backend/src/routes/ | grep -E \"\\\\.js$\")"
     ]
   }
 }

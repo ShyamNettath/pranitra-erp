@@ -4,13 +4,16 @@ const db = require('../config/db');
 router.use(authenticate);
 router.get('/', async (req, res, next) => {
   try {
-    let q = db('workspaces').where({ is_active: true });
-    if (!req.user.roles.includes('admin') && !req.user.roles.includes('director')) {
-      q = q.join('workspace_members as wm', function(){
-        this.on('wm.workspace_id','workspaces.id').andOn('wm.user_id', db.raw('?',[req.user.id])).andOn('wm.is_active',db.raw('true'));
-      });
+    // super_user sees all workspaces; everyone else sees only their assigned workspaces
+    if (req.user.roles.includes('super_user')) {
+      return res.json(await db('workspaces').where({ is_active: true }).select('*').orderBy('name'));
     }
-    res.json(await q.select('workspaces.*').orderBy('workspaces.name'));
+    const rows = await db('workspace_members as wm')
+      .join('workspaces as w', 'w.id', 'wm.workspace_id')
+      .where({ 'wm.user_id': req.user.id, 'wm.is_active': true, 'w.is_active': true })
+      .select('w.*')
+      .orderBy('w.name');
+    res.json(rows);
   } catch(e){ next(e); }
 });
 router.post('/', requireRole('admin'), async (req, res, next) => {

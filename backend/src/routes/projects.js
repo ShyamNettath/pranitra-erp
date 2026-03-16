@@ -1,11 +1,11 @@
 const router = require('express').Router();
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireRole, requireWorkspaceMember } = require('../middleware/auth');
 const ctrl = require('../controllers/projectsController');
 
 router.use(authenticate);
 
-// List projects (filtered by workspace, role)
-router.get('/',          ctrl.list);
+// List projects (filtered by workspace, role) — workspace membership checked via query param
+router.get('/',          requireWorkspaceMember, ctrl.list);
 router.get('/:id',       ctrl.get);
 
 // Create/submit — PM only
@@ -22,7 +22,11 @@ router.post('/:id/request-changes',requireRole('director', 'admin'), ctrl.reques
 router.post('/:id/members',        requireRole('project_manager', 'admin'), ctrl.addMember);
 router.delete('/:id/members/:userId', requireRole('project_manager', 'admin'), ctrl.removeMember);
 
-// Soft delete
+// Super User — approve & delete
+router.patch('/:id/approve', requireRole('super_user'), ctrl.superUserApprove);
+router.delete('/:id/super-delete', requireRole('super_user'), ctrl.superUserDelete);
+
+// Soft delete (PM / admin)
 router.delete('/:id',   requireRole('project_manager', 'admin'), ctrl.softDelete);
 
 // Milestones

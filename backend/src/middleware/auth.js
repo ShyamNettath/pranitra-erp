@@ -52,15 +52,17 @@ function requireRole(...allowed) {
 
 /**
  * Workspace membership guard.
- * Expects :workspaceId param or req.body.workspace_id.
+ * Expects :workspaceId param or req.body.workspace_id or req.query.workspace_id.
+ * super_user bypasses all workspace checks.
+ * Everyone else must be in workspace_members.
  */
 async function requireWorkspaceMember(req, res, next) {
   try {
-    const workspaceId = req.params.workspaceId || req.body.workspace_id || req.query.workspaceId;
+    const workspaceId = req.params.workspaceId || req.body.workspace_id || req.query.workspace_id || req.query.workspaceId;
     if (!workspaceId) return next();  // skip if no workspace context
 
-    // Admins and Directors can access any workspace
-    if (req.user.roles.includes('admin') || req.user.roles.includes('director')) return next();
+    // super_user can access any workspace
+    if (req.user.roles.includes('super_user')) return next();
 
     const member = await db('workspace_members')
       .where({ workspace_id: workspaceId, user_id: req.user.id, is_active: true })

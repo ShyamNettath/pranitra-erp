@@ -63,7 +63,7 @@ const useAuthStore = create((set, get) => ({
     localStorage.setItem('pranitra_refresh_token', data.refresh_token);
     set({
       user:        data.user,
-      workspaces:  data.user?.workspaces || [],
+      workspaces:  data.workspaces || [],
       accessToken: data.access_token,
       loginStep:   'workspace',
       isLoading:   false,

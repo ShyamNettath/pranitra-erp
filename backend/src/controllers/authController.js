@@ -23,6 +23,22 @@ function makeRefreshToken(userId) {
     { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
   );
 }
+
+/**
+ * Get accessible workspaces for a user.
+ * super_user → all active workspaces.
+ * Everyone else → only workspaces they are assigned to in workspace_members.
+ */
+async function getAccessibleWorkspaces(userId, roles) {
+  if (roles.includes('super_user')) {
+    return db('workspaces').where({ is_active: true }).select('id', 'name', 'slug', 'color').orderBy('name');
+  }
+  return db('workspace_members as wm')
+    .join('workspaces as w', 'w.id', 'wm.workspace_id')
+    .where({ 'wm.user_id': userId, 'wm.is_active': true, 'w.is_active': true })
+    .select('w.id', 'w.name', 'w.slug', 'w.color')
+    .orderBy('w.name');
+}
  
 exports.login = async (req, res, next) => {
   try {
@@ -47,10 +63,7 @@ exports.login = async (req, res, next) => {
     }
 
     if (!otpEnabled) {
-      const workspaces = await db('workspace_members as wm')
-        .join('workspaces as w', 'w.id', 'wm.workspace_id')
-        .where({ 'wm.user_id': user.id, 'wm.is_active': true, 'w.is_active': true })
-        .select('w.id', 'w.name', 'w.slug', 'w.color');
+      const workspaces = await getAccessibleWorkspaces(user.id, roles);
 
       const accessToken = makeAccessToken(user.id, roles, null);
       const refreshToken = makeRefreshToken(user.id);
@@ -104,10 +117,7 @@ exports.verifyOtp = async (req, res, next) => {
  
     const user = await db('users').where({ id: user_id }).first();
     const roles = (await db('user_roles').where({ user_id }).select('role')).map(r => r.role);
-    const workspaces = await db('workspace_members as wm')
-      .join('workspaces as w', 'w.id', 'wm.workspace_id')
-      .where({ 'wm.user_id': user_id, 'wm.is_active': true, 'w.is_active': true })
-      .select('w.id', 'w.name', 'w.slug', 'w.color');
+    const workspaces = await getAccessibleWorkspaces(user_id, roles);
  
     const accessToken = makeAccessToken(user_id, roles, null);
     const refreshToken = makeRefreshToken(user_id);
@@ -141,6 +151,14 @@ exports.selectWorkspace = async (req, res, next) => {
     const ws = await db('workspaces').where({ id: workspace_id, is_active: true }).first();
     if (!ws) return res.status(404).json({ error: 'Workspace not found' });
     const roles = req.user.roles;
+
+    // Verify workspace access (super_user bypasses)
+    if (!roles.includes('super_user')) {
+      const member = await db('workspace_members')
+        .where({ workspace_id, user_id: userId, is_active: true }).first();
+      if (!member) return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
     const accessToken = makeAccessToken(userId, roles, workspace_id);
     const refreshToken = makeRefreshToken(userId);
     const expiresAt = new Date();
@@ -177,10 +195,7 @@ exports.me = async (req, res) => {
   const userId = req.user.sub || req.user.id;
   const user = await db('users').where({ id: userId }).first();
   const roles = req.user.roles;
-  const workspaces = await db('workspace_members as wm')
-    .join('workspaces as w', 'w.id', 'wm.workspace_id')
-    .where({ 'wm.user_id': userId, 'wm.is_active': true, 'w.is_active': true })
-    .select('w.id', 'w.name', 'w.slug', 'w.color');
+  const workspaces = await getAccessibleWorkspaces(userId, roles);
   delete user.password_hash;
   delete user.totp_secret;
   return res.json({ ...user, roles, workspaces, must_reset_password: !!user.must_reset_password });

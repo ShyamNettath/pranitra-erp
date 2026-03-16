@@ -22,6 +22,7 @@ router.get('/:id', ctrl.get);
 router.post('/', requireRole('admin'), ctrl.create);
 router.put('/me/password', ctrl.changePassword);
 router.put('/:id', requireRole('admin'), ctrl.update);
+router.put('/:id/workspaces', requireRole('super_user'), ctrl.updateWorkspaces);
 router.put('/:id/roles', requireRole('admin'), ctrl.updateRoles);
 router.post('/:id/deactivate', requireRole('admin'), ctrl.deactivate);
 router.post('/:id/reactivate', requireRole('admin'), ctrl.reactivate);

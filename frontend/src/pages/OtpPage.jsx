@@ -48,12 +48,17 @@ export default function OtpPage() {
       const data = await verifyOtp(pendingUserId, otp);
       if (data.user?.must_reset_password) {
         navigate('/force-reset-password');
-      } else if (data.workspaces.length === 1) {
-        const { selectWorkspace } = useAuthStore.getState();
-        await selectWorkspace(data.workspaces[0].id);
-        navigate('/');
       } else {
-        navigate('/workspace');
+        const ws = data.workspaces || [];
+        if (ws.length === 0) {
+          navigate('/workspace');
+        } else if (ws.length === 1) {
+          const { selectWorkspace } = useAuthStore.getState();
+          await selectWorkspace(ws[0].id);
+          navigate('/');
+        } else {
+          navigate('/workspace');
+        }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid OTP. Please try again.');

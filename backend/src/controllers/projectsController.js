@@ -4,7 +4,7 @@ const { sendNotificationEmail } = require('../services/emailService');
 
 // ── helpers ──────────────────────────────────────────────────────
 async function canAccessProject(userId, roles, projectId) {
-  if (roles.includes('admin') || roles.includes('director')) return true;
+  if (roles.includes('admin') || roles.includes('director') || roles.includes('super_user')) return true;
   const member = await db('project_members').where({ project_id: projectId, user_id: userId, is_active: true }).first();
   return !!member;
 }
@@ -28,8 +28,8 @@ exports.list = async (req, res, next) => {
     if (status)       q = q.where('p.status', status);
     if (search)       q = q.whereILike('p.name', `%${search}%`);
 
-    // Non-admin/director: only see projects they belong to
-    if (!roles.includes('admin') && !roles.includes('director')) {
+    // Non-admin/director/super_user: only see projects they belong to
+    if (!roles.includes('admin') && !roles.includes('director') && !roles.includes('super_user')) {
       q = q.join('project_members as pm2', function() {
         this.on('pm2.project_id', 'p.id').andOn('pm2.user_id', db.raw('?', [userId])).andOn('pm2.is_active', db.raw('true'));
       });
@@ -246,6 +246,37 @@ exports.softDelete = async (req, res, next) => {
     await db('projects').where({ id: req.params.id }).update({ is_deleted: true });
     await writeAuditLog(req.user.id, 'project.delete', 'project', req.params.id, null, req);
     return res.json({ ok: true });
+  } catch (err) { next(err); }
+};
+
+// ── PATCH /api/projects/:id/approve — super_user only ────────────
+exports.superUserApprove = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const project = await db('projects').where({ id, is_deleted: false }).first();
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const [updated] = await db('projects').where({ id }).update({
+      status: 'active',
+      approved_by: req.user.id,
+      approved_at: new Date(),
+    }).returning('*');
+
+    await writeAuditLog(req.user.id, 'project_approved', 'project', id, null, req);
+    return res.json(updated);
+  } catch (err) { next(err); }
+};
+
+// ── DELETE /api/projects/:id/super-delete — super_user only ──────
+exports.superUserDelete = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const project = await db('projects').where({ id, is_deleted: false }).first();
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    await db('projects').where({ id }).update({ is_deleted: true });
+    await writeAuditLog(req.user.id, 'project_deleted', 'project', id, null, req);
+    return res.json({ ok: true, message: 'Project deleted' });
   } catch (err) { next(err); }
 };
 

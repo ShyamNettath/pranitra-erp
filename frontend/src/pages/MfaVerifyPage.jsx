@@ -21,7 +21,16 @@ export default function MfaVerifyPage() {
       if (data.user?.must_reset_password) {
         navigate('/force-reset-password');
       } else {
-        navigate('/workspace');
+        const ws = data.workspaces || [];
+        if (ws.length === 0) {
+          navigate('/workspace');
+        } else if (ws.length === 1) {
+          const { selectWorkspace } = useAuthStore.getState();
+          await selectWorkspace(ws[0].id);
+          navigate('/');
+        } else {
+          navigate('/workspace');
+        }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid code. Please try again.');

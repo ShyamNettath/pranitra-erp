@@ -6,7 +6,7 @@ const db = require('../config/db');
 const { writeAuditLog } = require('../utils/audit');
 const { sendEmail } = require('../services/emailService');
 
-const VALID_ROLES = ['admin', 'director', 'project_manager', 'team_member', 'client'];
+const VALID_ROLES = ['super_user', 'admin', 'director', 'project_manager', 'team_member', 'client'];
 const VALID_LOCATIONS = ['Bangalore', 'Gulbarga', 'Coimbatore'];
 
 // GET /api/users
@@ -45,7 +45,8 @@ exports.get = async (req, res, next) => {
     const roles = (await db('user_roles').where({ user_id: req.params.id }).select('role')).map(r => r.role);
     const workspaces = await db('workspace_members as wm')
       .join('workspaces as w', 'w.id', 'wm.workspace_id')
-      .where({ 'wm.user_id': req.params.id }).select('w.id', 'w.name', 'w.slug');
+      .where({ 'wm.user_id': req.params.id, 'wm.is_active': true, 'w.is_active': true })
+      .select('w.id', 'w.name', 'w.slug');
     const { password_hash, ...safe } = user;
     return res.json({ ...safe, roles, workspaces });
   } catch (err) { next(err); }
@@ -188,6 +189,37 @@ exports.changePassword = async (req, res, next) => {
     // Revoke all refresh tokens (force re-login)
     await db('refresh_tokens').where({ user_id: req.user.id }).update({ revoked: true });
     return res.json({ ok: true });
+  } catch (err) { next(err); }
+};
+
+// PUT /api/users/:id/workspaces — super_user only
+exports.updateWorkspaces = async (req, res, next) => {
+  try {
+    const { workspace_ids } = req.body;
+    if (!Array.isArray(workspace_ids)) return res.status(422).json({ error: 'workspace_ids must be an array' });
+    const userId = req.params.id;
+
+    // Verify user exists
+    const user = await db('users').where({ id: userId, is_deleted: false }).first();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Remove all existing workspace memberships
+    await db('workspace_members').where({ user_id: userId }).delete();
+
+    // Insert new memberships
+    for (const wsId of workspace_ids) {
+      await db('workspace_members').insert({ workspace_id: wsId, user_id: userId, is_active: true })
+        .onConflict(['workspace_id', 'user_id']).merge({ is_active: true });
+    }
+
+    // Return updated workspace list
+    const workspaces = await db('workspace_members as wm')
+      .join('workspaces as w', 'w.id', 'wm.workspace_id')
+      .where({ 'wm.user_id': userId, 'wm.is_active': true })
+      .select('w.id', 'w.name', 'w.slug');
+
+    await writeAuditLog(req.user.id, 'user.workspaces_updated', 'user', userId, { workspace_ids }, req);
+    return res.json({ ok: true, workspaces });
   } catch (err) { next(err); }
 };
 
