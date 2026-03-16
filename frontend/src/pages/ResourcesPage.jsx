@@ -151,7 +151,7 @@ export default function ResourcesPage() {
             {isAdmin && profile.hourly_rate && (
               <div style={{ background:'var(--grey-bg)',borderRadius:8,padding:12 }}>
                 <div style={{ fontSize:11,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)',marginBottom:6 }}>Costing (Admin Only)</div>
-                <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)' }}>{profile.currency||'EUR'} {parseFloat(profile.hourly_rate).toFixed(2)}/h</div>
+                <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)' }}>{profile.currency||'INR'} {parseFloat(profile.hourly_rate).toFixed(2)}/h</div>
               </div>
             )}
           </div>

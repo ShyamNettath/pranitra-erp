@@ -111,7 +111,7 @@ export default function ProjectDetailPage() {
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',background:'white',border:'1px solid var(--grey-border)',borderRadius:6,padding:'6px 20px',marginBottom:8,height:42 }}>
         {project.cycle_time && <><Stat label="Cycle Time" value={project.cycle_time}/><div style={{ width:1,height:22,background:'var(--grey-border)' }}/></>}
         {project.payment_terms && <><Stat label="Payment Terms" value={project.payment_terms}/><div style={{ width:1,height:22,background:'var(--grey-border)' }}/></>}
-        <Stat label="Budget" value={project.budget?`€${Number(project.budget).toLocaleString('en-GB')}`:'—'}/>
+        <Stat label="Budget" value={project.budget?`₹${Number(project.budget).toLocaleString('en-IN')}`:'—'}/>
         <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>
         <Stat label="Start" value={project.start_date?new Date(project.start_date).toLocaleDateString('en-GB'):'—'}/>
         <div style={{ width:1,height:22,background:'var(--grey-border)' }}/>

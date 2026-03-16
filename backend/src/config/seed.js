@@ -83,7 +83,7 @@ async function seed() {
     { name: 'Handling+Joining', baseline_hours: 0,  stage_count: 3, stage_splits: JSON.stringify([25, 35, 40]), qc_pct: 10 },
   ];
   for (const rc of robotCats) {
-    await db('simulation_robot_categories').insert(rc).onConflict('name').ignore();
+    try { await db('simulation_robot_categories').insert(rc); } catch { /* already exists */ }
   }
 
   // ── Report visibility defaults ───────────────────────────────

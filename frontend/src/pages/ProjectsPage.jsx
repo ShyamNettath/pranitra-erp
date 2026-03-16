@@ -225,9 +225,9 @@ function CreateProjectModal({ onClose }) {
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={labelStyle}>Budget (€) *</label>
+                <label style={labelStyle}>Budget (₹) *</label>
                 <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 12, top: 9, fontSize: 14, color: 'var(--grey-text)', fontWeight: 700 }}>€</span>
+                  <span style={{ position: 'absolute', left: 12, top: 9, fontSize: 14, color: 'var(--grey-text)', fontWeight: 700 }}>₹</span>
                   <input type="number" style={{ ...inputStyle, paddingLeft: 28 }} value={budget} onChange={e => setBudget(e.target.value)} placeholder="0.00" />
                 </div>
               </div>
@@ -264,7 +264,7 @@ function CreateProjectModal({ onClose }) {
                           <input type="date" style={inputStyle} value={m.due_date} onChange={e => updateMilestone(i, 'due_date', e.target.value)} />
                         </div>
                         <div>
-                          <label style={labelStyle}>Amount (€)</label>
+                          <label style={labelStyle}>Amount (₹)</label>
                           <input type="number" style={inputStyle} value={m.amount} onChange={e => updateMilestone(i, 'amount', e.target.value)} placeholder="0.00" />
                         </div>
                       </div>
@@ -328,7 +328,7 @@ function CreateProjectModal({ onClose }) {
                 <div style={{ padding: '10px 16px', background: 'var(--grey-bg)', fontWeight: 700, fontSize: 13, color: 'var(--navy)' }}>Commercial Details</div>
                 <div style={{ padding: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
-                    ['Budget', `€${Number(budget).toLocaleString('en-GB')}`],
+                    ['Budget', `₹${Number(budget).toLocaleString('en-IN')}`],
                     ['Start Date', start_date ? new Date(start_date + 'T00:00').toLocaleDateString('en-GB') : '—'],
                     ['End Date', end_date ? new Date(end_date + 'T00:00').toLocaleDateString('en-GB') : '—'],
                     ['Payment Terms', payment_terms],
@@ -347,7 +347,7 @@ function CreateProjectModal({ onClose }) {
                         <span style={{ fontWeight: 700 }}>{m.name}</span>
                         <span style={{ color: 'var(--grey-text)' }}>
                           {m.due_date ? new Date(m.due_date + 'T00:00').toLocaleDateString('en-GB') : '—'}
-                          {m.amount ? ` · €${Number(m.amount).toLocaleString('en-GB')}` : ''}
+                          {m.amount ? ` · ₹${Number(m.amount).toLocaleString('en-IN')}` : ''}
                         </span>
                       </div>
                     ))}
@@ -483,7 +483,7 @@ export default function ProjectsPage() {
                     <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.pm_name || '—'}</td>
                     <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.start_date ? new Date(p.start_date).toLocaleDateString('en-GB') : '—'}</td>
                     <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.end_date ? new Date(p.end_date).toLocaleDateString('en-GB') : '—'}</td>
-                    <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.budget ? `€${Number(p.budget).toLocaleString('en-GB')}` : '—'}</td>
+                    <td style={{ padding: '11px 12px', fontSize: 12.5, color: 'var(--grey-text)', borderBottom: '1px solid var(--grey-bg)' }}>{p.budget ? `₹${Number(p.budget).toLocaleString('en-IN')}` : '—'}</td>
                     <td style={{ padding: '11px 12px', borderBottom: '1px solid var(--grey-bg)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 80, height: 6, background: 'var(--grey-bg)', borderRadius: 3 }}>

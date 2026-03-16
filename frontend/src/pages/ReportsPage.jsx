@@ -124,9 +124,9 @@ function BudgetReport({ data }) {
   const overspend = data.variance_pct > 0;
   return (
     <div style={{ display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12 }}>
-      <KpiCard label="Total Budget"   value={`€${Number(data.budget||0).toLocaleString('en-GB')}`}        color="var(--navy)"/>
-      <KpiCard label="Actual Cost"    value={`€${Number(data.actual_cost||0).toLocaleString('en-GB')}`}   color={overspend?'var(--red)':'var(--green)'}/>
-      <KpiCard label="Remaining"      value={`€${Number(data.remaining||0).toLocaleString('en-GB')}`}     color={data.remaining>=0?'var(--green)':'var(--red)'}/>
+      <KpiCard label="Total Budget"   value={`₹${Number(data.budget||0).toLocaleString('en-IN')}`}        color="var(--navy)"/>
+      <KpiCard label="Actual Cost"    value={`₹${Number(data.actual_cost||0).toLocaleString('en-IN')}`}   color={overspend?'var(--red)':'var(--green)'}/>
+      <KpiCard label="Remaining"      value={`₹${Number(data.remaining||0).toLocaleString('en-IN')}`}     color={data.remaining>=0?'var(--green)':'var(--red)'}/>
       <KpiCard label="Variance"       value={`${data.variance_pct||0}%`}                                  color={overspend?'var(--red)':'var(--green)'}/>
     </div>
   );
