@@ -197,9 +197,16 @@ async function fetchAllRecords(accessToken) {
     const res = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${accessToken}` } });
     const data = await res.json();
 
-    if (data.error || !data.response || !data.response.result) break;
-
-    const batch = data.response.result;
+    let batch;
+    if (data.response && data.response.result) {
+      batch = data.response.result;
+    } else if (Array.isArray(data)) {
+      batch = data;
+    } else if (typeof data === 'object' && data['0']) {
+      batch = Object.values(data);
+    } else {
+      break;
+    }
     if (!Array.isArray(batch) || batch.length === 0) break;
 
     records.push(...batch);
