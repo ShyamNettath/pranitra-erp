@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useAuthStore from '@/store/authStore';
+import api from '@/services/api';
 
 const FONT = 'Arial, sans-serif';
 const NAVY = '#003264';
@@ -18,18 +19,15 @@ function useQuote() {
       try { setQuote(JSON.parse(cached)); return; } catch {}
     }
 
-    fetch('https://zenquotes.io/api/today')
-      .then(r => r.json())
-      .then(data => {
-        const item = Array.isArray(data) ? data[0] : data;
-        if (item && item.q) {
-          const q = { text: item.q, author: item.a };
+    api.get('/dashboard/quote')
+      .then(({ data }) => {
+        if (data && data.quote) {
+          const q = { text: data.quote, author: data.author };
           localStorage.setItem(cacheKey, JSON.stringify(q));
           setQuote(q);
         }
       })
       .catch(() => {
-        // Try to find any previous cached quote
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key && key.startsWith('daily_quote_') && key !== cacheKey) {
@@ -215,7 +213,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 3, fontFamily: FONT }}>
-          {greeting}, {user?.name?.split(' ')[0]}
+          {greeting}, {user?.name?.split(' ')[0]} 👋
         </h1>
         <p style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>
           {workspace?.name} · {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
