@@ -251,29 +251,52 @@ class DeployApp(tk.Tk):
 
             repo = self.cfg.get("server_repo_path", "/var/www/usaha-erp")
             deploy_cmd = (
-                f"cd {repo} && "
-                f"git pull origin main && "
-                f"docker compose up --build -d && "
-                f"sleep 8 && "
-                f"docker compose exec -T api node src/config/migrate-runner.js 2>&1"
+                f"cd {repo} 2>&1 && "
+                f"git pull origin main 2>&1 && "
+                f"docker compose up --build -d 2>&1 && "
+                f"sleep 12 && "
+                f"docker compose exec -T api node src/config/migrate-runner.js 2>&1 || true"
             )
             self._log(f"  Running: git pull + docker compose + auto migrations", "info")
-            _, stdout, stderr = ssh.exec_command(deploy_cmd, timeout=300)
+
+            transport = ssh.get_transport()
+            channel = transport.open_session()
+            channel.exec_command(f"bash -c \"{deploy_cmd}\"")
+            channel.set_combine_stderr(True)
 
             migration_started = False
-            for line in stdout:
-                clean = line.rstrip()
-                if any(word in clean.lower() for word in ["running migration", "migration complete", "already applied", "skipping", "migrate-runner"]):
-                    if not migration_started:
-                        self._log("\n── STEP 5: Run Migrations ───────────", "step")
-                        migration_started = True
-                    if "complete" in clean.lower() or "skipping" in clean.lower():
-                        self._log("  " + clean, "ok")
+            while not channel.exit_status_ready():
+                if channel.recv_ready():
+                    data = channel.recv(4096).decode("utf-8", errors="replace")
+                    for line in data.splitlines():
+                        clean = line.rstrip()
+                        if any(word in clean.lower() for word in ["running migration", "migration complete", "already applied", "skipping", "migrate-runner"]):
+                            if not migration_started:
+                                self._log("\n── STEP 5: Run Migrations ───────────", "step")
+                                migration_started = True
+                            if "complete" in clean.lower() or "skipping" in clean.lower():
+                                self._log("  " + clean, "ok")
+                            else:
+                                self._log("  " + clean, "info")
+                        else:
+                            self._log("  " + clean, "info")
+
+            while channel.recv_ready():
+                data = channel.recv(4096).decode("utf-8", errors="replace")
+                for line in data.splitlines():
+                    clean = line.rstrip()
+                    if any(word in clean.lower() for word in ["running migration", "migration complete", "already applied", "skipping", "migrate-runner"]):
+                        if not migration_started:
+                            self._log("\n── STEP 5: Run Migrations ───────────", "step")
+                            migration_started = True
+                        if "complete" in clean.lower() or "skipping" in clean.lower():
+                            self._log("  " + clean, "ok")
+                        else:
+                            self._log("  " + clean, "info")
                     else:
                         self._log("  " + clean, "info")
-                else:
-                    self._log("  " + clean, "info")
-            exit_code = stdout.channel.recv_exit_status()
+
+            exit_code = channel.recv_exit_status()
             ssh.close()
 
             if exit_code != 0:
