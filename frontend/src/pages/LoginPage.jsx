@@ -82,7 +82,7 @@ export default function LoginPage() {
             </div>
           )}
           {branding.company_name && (
-            <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--navy)', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--navy)', textAlign: 'right' }}>
               {branding.company_name}
             </div>
           )}
