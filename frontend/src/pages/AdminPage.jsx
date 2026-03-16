@@ -872,6 +872,7 @@ const ALL_MODULES = [
   { key:'gantt',      label:'Gantt' },
   { key:'reports',    label:'Reports' },
   { key:'resources',  label:'Resources' },
+  { key:'hr-employees', label:'Associates' },
 ];
 
 function WorkspaceModuleCard({ ws }) {

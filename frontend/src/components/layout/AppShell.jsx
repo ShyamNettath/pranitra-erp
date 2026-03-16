@@ -10,6 +10,7 @@ const ALL_NAV = [
   { key: 'gantt',      to: '/gantt',     label: 'Gantt',      icon: '▦' },
   { key: 'reports',    to: '/reports',   label: 'Reports',    icon: '📈' },
   { key: 'resources',  to: '/resources', label: 'Resources',  icon: '👥' },
+  { key: 'hr-employees', to: '/hr-employees', label: 'Associates', icon: '👤' },
 ];
 
 export default function AppShell() {

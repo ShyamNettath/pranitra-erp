@@ -92,4 +92,14 @@ cron.schedule('0 6 * * *', async () => {
   } catch (e) { logger.error('Zoho sync error:', e); }
 });
 
+// ── Weekly Zoho People full sync (Sunday at midnight) ─────────────
+cron.schedule('0 0 * * 0', async () => {
+  if (!process.env.ZOHO_CLIENT_ID) return;
+  try {
+    const { syncAllEmployees } = require('../services/zohoService');
+    await syncAllEmployees();
+    logger.info('Weekly Zoho People sync completed');
+  } catch (e) { logger.error('Weekly Zoho sync error:', e); }
+});
+
 logger.info('Background scheduler started');
