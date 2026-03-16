@@ -86,7 +86,7 @@ async function seed() {
     { key: 'idle_time',           roles: ['admin', 'director'] },
     { key: 'lessons_learned',     roles: ['admin', 'director', 'project_manager'] },
   ];
-  const allRoles = ['admin', 'director', 'project_manager', 'team_member', 'client'];
+  const allRoles = ['super_user', 'admin', 'hr_manager', 'hr_executive', 'director', 'delivery_head', 'project_manager', 'design_leader', 'design_manager', 'simulation_leader', 'simulation_manager', 'layout_planning_leader', 'qc_leader_manager', 'team_member', 'client'];
   for (const rd of reportDefs) {
     for (const role of allRoles) {
       const visible = rd.roles.includes(role);

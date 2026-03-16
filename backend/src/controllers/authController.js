@@ -31,12 +31,12 @@ function makeRefreshToken(userId) {
  */
 async function getAccessibleWorkspaces(userId, roles) {
   if (roles.includes('super_user')) {
-    return db('workspaces').where({ is_active: true }).select('id', 'name', 'slug', 'color').orderBy('name');
+    return db('workspaces').where({ is_active: true }).select('id', 'name', 'slug', 'color', 'modules').orderBy('name');
   }
   return db('workspace_members as wm')
     .join('workspaces as w', 'w.id', 'wm.workspace_id')
     .where({ 'wm.user_id': userId, 'wm.is_active': true, 'w.is_active': true })
-    .select('w.id', 'w.name', 'w.slug', 'w.color')
+    .select('w.id', 'w.name', 'w.slug', 'w.color', 'w.modules')
     .orderBy('w.name');
 }
  
@@ -167,7 +167,7 @@ exports.selectWorkspace = async (req, res, next) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     await db('refresh_tokens').insert({ user_id: userId, token: refreshToken, expires_at: expiresAt, revoked: false, device_info: req.headers['user-agent'] || null });
-    return res.json({ access_token: accessToken, refresh_token: refreshToken, workspace: { id: ws.id, name: ws.name, slug: ws.slug, color: ws.color } });
+    return res.json({ access_token: accessToken, refresh_token: refreshToken, workspace: { id: ws.id, name: ws.name, slug: ws.slug, color: ws.color, modules: ws.modules } });
   } catch (err) { next(err); }
 };
  

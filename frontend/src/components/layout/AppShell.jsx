@@ -3,13 +3,13 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import useAuthStore from '@/store/authStore';
 import api from '@/services/api';
 
-const NAV = [
-  { to: '/',          label: 'Dashboard',  icon: '⊞' },
-  { to: '/projects',  label: 'Projects',   icon: '▤' },
-  { to: '/tasks',     label: 'Tasks',      icon: '≡' },
-  { to: '/gantt',     label: 'Gantt',      icon: '▦' },
-  { to: '/reports',   label: 'Reports',    icon: '📈' },
-  { to: '/resources', label: 'Resources',  icon: '👥' },
+const ALL_NAV = [
+  { key: 'dashboard',  to: '/',          label: 'Dashboard',  icon: '⊞' },
+  { key: 'projects',   to: '/projects',  label: 'Projects',   icon: '▤' },
+  { key: 'tasks',      to: '/tasks',     label: 'Tasks',      icon: '≡' },
+  { key: 'gantt',      to: '/gantt',     label: 'Gantt',      icon: '▦' },
+  { key: 'reports',    to: '/reports',   label: 'Reports',    icon: '📈' },
+  { key: 'resources',  to: '/resources', label: 'Resources',  icon: '👥' },
 ];
 
 export default function AppShell() {
@@ -19,6 +19,8 @@ export default function AppShell() {
   const isAdminOrSuper = user?.roles?.some(r => r === 'admin' || r === 'super_user');
   const isSuperUser = user?.roles?.includes('super_user');
   const isItWorkspace = workspace?.slug === 'it';
+  const enabledModules = workspace?.modules;
+  const NAV = ALL_NAV.filter(item => item.key === 'dashboard' || !enabledModules || enabledModules.includes(item.key));
   const adminLabel = (isSuperUser || isItWorkspace) ? 'Admin Panel' : 'Settings';
 
   // User dropdown

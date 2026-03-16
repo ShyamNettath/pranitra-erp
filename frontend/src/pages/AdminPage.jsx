@@ -11,6 +11,7 @@ const ADMIN_SECTIONS = [
   { key:'roles',      label:'Roles & Permissions',   group:'Access & Users' },
   { key:'audit',      label:'Audit Log',             group:'Access & Users' },
   { key:'hr-employees', label:'HR Employees',        group:'Access & Users' },
+  { key:'modules',    label:'Workspace Modules',     group:'Access & Users' },
   { key:'complexity', label:'Complexity Settings',   group:'Project Config' },
   { key:'lop-sections', label:'LOP Sections', group:'Project Config' },
   { key:'holidays',   label:'Holiday List',          group:'Project Config' },
@@ -21,12 +22,12 @@ const ADMIN_SECTIONS = [
   { key:'sysinfo',    label:'System Info',           group:'System' },
 ];
 
-const ROLES_ALL = ['super_user','admin','director','project_manager','team_member','client'];
+const ROLES_ALL = ['super_user','admin','hr_manager','hr_executive','director','delivery_head','project_manager','design_leader','design_manager','simulation_leader','simulation_manager','layout_planning_leader','qc_leader_manager','team_member','client'];
 const REPORTS_ALL = ['project_performance','effort_variance','schedule_variance','budget_variance','rework_analysis','escalations_log','associate_productivity','rework_hours','efficiency_analysis','idle_time','lessons_learned'];
 const REPORT_LABELS = { project_performance:'Project Performance',effort_variance:'Effort Variance',schedule_variance:'Schedule Variance',budget_variance:'Budget Variance',rework_analysis:'Rework Analysis',escalations_log:'Escalations Log',associate_productivity:'Associate Productivity',rework_hours:'Rework Hours',efficiency_analysis:'Efficiency Analysis',idle_time:'Idle Time',lessons_learned:'Lessons Learned' };
-const ROLE_LABELS = { super_user:'Super User',admin:'Admin',director:'Director',project_manager:'Project Mgr',team_member:'Member',client:'Client' };
+const ROLE_LABELS = { super_user:'Super User',admin:'Admin',hr_manager:'HR Manager',hr_executive:'HR Executive',director:'Director',delivery_head:'Delivery Head',project_manager:'Project Manager',design_leader:'Design Leader',design_manager:'Design Manager',simulation_leader:'Simulation Leader',simulation_manager:'Simulation Manager',layout_planning_leader:'Layout & Planning Leader',qc_leader_manager:'QC Leader / Manager',team_member:'Team Member',client:'Client' };
 
-const ROLE_COLORS = { super_user:'#333',admin:'var(--red)',director:'var(--navy)',project_manager:'var(--purple)',team_member:'var(--green)',client:'var(--amber)' };
+const ROLE_COLORS = { super_user:'#333',admin:'var(--red)',hr_manager:'#0891b2',hr_executive:'#06b6d4',director:'var(--navy)',delivery_head:'#7c3aed',project_manager:'var(--purple)',design_leader:'#d97706',design_manager:'#f59e0b',simulation_leader:'#059669',simulation_manager:'#10b981',layout_planning_leader:'#6366f1',qc_leader_manager:'#ec4899',team_member:'var(--green)',client:'var(--amber)' };
 
 function Toggle({ on, onChange }) {
   return (
@@ -865,6 +866,69 @@ function SysInfoPanel() {
   );
 }
 
+const ALL_MODULES = [
+  { key:'dashboard',  label:'Dashboard' },
+  { key:'projects',   label:'Projects' },
+  { key:'tasks',      label:'Tasks' },
+  { key:'gantt',      label:'Gantt' },
+  { key:'reports',    label:'Reports' },
+  { key:'resources',  label:'Resources' },
+];
+
+function WorkspaceModulesPanel() {
+  const qc = useQueryClient();
+  const { data: workspaces=[], isLoading } = useQuery({
+    queryKey: ['workspaces-modules'],
+    queryFn: () => api.get('/workspaces').then(r => r.data),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, modules }) => api.put(`/workspaces/${id}/modules`, { modules }).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries(['workspaces-modules']),
+  });
+
+  if (isLoading) return <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)' }}>Loading…</div>;
+
+  return (
+    <div>
+      <h2 style={{ fontSize:18,fontWeight:700,color:'var(--navy)',marginBottom:3 }}>Workspace Modules</h2>
+      <p style={{ fontSize:13,color:'var(--grey-text)',marginBottom:20 }}>Control which navigation items appear in each workspace sidebar.</p>
+      <div style={{ display:'grid',gap:16 }}>
+        {workspaces.map(ws => {
+          const current = ws.modules || ALL_MODULES.map(m=>m.key);
+          return (
+            <div key={ws.id} style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:'18px 20px' }}>
+              <div style={{ fontSize:14,fontWeight:700,color:'var(--navy)',marginBottom:12 }}>{ws.name}</div>
+              <div style={{ display:'flex',flexWrap:'wrap',gap:10 }}>
+                {ALL_MODULES.map(m => {
+                  const enabled = m.key==='dashboard' || current.includes(m.key);
+                  const isDashboard = m.key==='dashboard';
+                  return (
+                    <label key={m.key} style={{ display:'flex',alignItems:'center',gap:6,fontSize:13,cursor:isDashboard?'default':'pointer',opacity:isDashboard?0.6:1 }}>
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        disabled={isDashboard || updateMut.isPending}
+                        onChange={() => {
+                          const next = enabled
+                            ? current.filter(k => k !== m.key)
+                            : [...current, m.key];
+                          updateMut.mutate({ id: ws.id, modules: next });
+                        }}
+                      />
+                      {m.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { user, workspace } = useAuthStore();
   const isSuperUser = user?.roles?.includes('super_user');
@@ -910,7 +974,8 @@ export default function AdminPage() {
         {section==='audit'      && <AuditPanel/>}
         {section==='sysinfo'    && <SysInfoPanel/>}
         {section==='hr-employees' && <HREmployeesPanel/>}
-        {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo','hr-employees'].includes(section) && (
+        {section==='modules'    && <WorkspaceModulesPanel/>}
+        {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo','hr-employees','modules'].includes(section) && (
           <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)',fontSize:14 }}>
             {visibleSections.find(s=>s.key===section)?.label} — available in full deployment.
           </div>

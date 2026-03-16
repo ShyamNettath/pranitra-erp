@@ -29,6 +29,14 @@ router.put('/:id', requireRole('admin'), async (req, res, next) => {
     res.json(ws);
   } catch(e){ next(e); }
 });
+router.put('/:id/modules', requireRole('admin'), async (req, res, next) => {
+  try {
+    const { modules } = req.body;
+    if (!Array.isArray(modules)) return res.status(400).json({ error: 'modules must be an array' });
+    const [ws] = await db('workspaces').where({ id: req.params.id }).update({ modules: JSON.stringify(modules) }).returning('*');
+    res.json(ws);
+  } catch(e){ next(e); }
+});
 router.post('/:id/members', requireRole('admin'), async (req, res, next) => {
   try {
     const { user_id } = req.body;

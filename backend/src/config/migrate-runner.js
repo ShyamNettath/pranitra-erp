@@ -23,6 +23,7 @@ const MIGRATIONS = [
   'migrate-lop-sections.js',
   'migrate-zoho-sync.js',
   'migrate-file-optimisation.js',
+  'migrate-workspace-modules.js',
 ];
 
 async function run() {

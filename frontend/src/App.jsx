@@ -62,10 +62,10 @@ export default function App() {
     const onBlur = (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement)) return;
-      if (t.type === 'email' || t.type === 'url') return;
+      if (t.type === 'email' || t.type === 'url' || t.type === 'password') return;
       const value = t.value;
       if (typeof value === 'string' && value.trim().length > 0) {
-        t.value = value.toUpperCase();
+        t.value = value.replace(/\b\w/g, c => c.toUpperCase()).replace(/\B\w/g, c => c.toLowerCase());
       }
     };
     document.addEventListener('blur', onBlur, true);

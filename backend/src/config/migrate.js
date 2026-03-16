@@ -42,11 +42,11 @@ async function migrate() {
     })
 
     // ── USER ROLES (global — users can hold multiple) ─────────────
-    // roles: admin | director | project_manager | team_member | client
+    // roles: super_user | admin | hr_manager | hr_executive | director | delivery_head | project_manager | design_leader | design_manager | simulation_leader | simulation_manager | layout_planning_leader | qc_leader_manager | team_member | client
     .createTableIfNotExists('user_roles', (t) => {
       t.uuid('id').primary().defaultTo(db.raw('uuid_generate_v4()'));
       t.uuid('user_id').references('id').inTable('users').onDelete('CASCADE').notNullable();
-      t.string('role').notNullable();    // admin | director | project_manager | team_member | client
+      t.string('role').notNullable();    // super_user | admin | hr_manager | hr_executive | director | delivery_head | project_manager | design_leader | design_manager | simulation_leader | simulation_manager | layout_planning_leader | qc_leader_manager | team_member | client
       t.timestamps(true, true);
       t.unique(['user_id', 'role']);
     })
