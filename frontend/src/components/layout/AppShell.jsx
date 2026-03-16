@@ -90,8 +90,8 @@ export default function AppShell() {
 
         {/* Right controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          {/* Workspace switcher — hidden for single-workspace users */}
-          {workspaces.length > 1 && (
+          {/* Workspace switcher */}
+          {workspaces.length >= 1 && (
             <select
               value={workspace?.id || ''}
               onChange={(e) => selectWorkspace(e.target.value).then(() => navigate('/'))}
