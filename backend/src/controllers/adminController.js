@@ -190,3 +190,22 @@ exports.getDbStats = async (_req, res, next) => {
     });
   } catch (err) { next(err); }
 };
+
+// ── Skills summary ──────────────────────────────────────────────
+exports.getSkillsSummary = async (_req, res, next) => {
+  try {
+    const totalResult = await db('skills').count('id as c').first();
+    const topSkills = await db('associate_skills as as2')
+      .join('skills as s', 's.id', 'as2.skill_id')
+      .select('s.name')
+      .count('as2.id as count')
+      .groupBy('s.name')
+      .orderBy('count', 'desc')
+      .limit(10);
+
+    return res.json({
+      total_skills: parseInt(totalResult.c),
+      top_skills: topSkills.map(r => ({ name: r.name, count: parseInt(r.count) })),
+    });
+  } catch (err) { next(err); }
+};

@@ -131,6 +131,101 @@ function FileStorageWidget() {
   );
 }
 
+function TeamUtilisationWidget() {
+  const { data: profiles=[] } = useQuery({ queryKey:['eng-resources'], queryFn:()=>api.get('/resources').then(r=>r.data) });
+  const total = profiles.length;
+  const overloaded = profiles.filter(p => parseFloat(p.utilisation_pct||0) > 90).length;
+  const optimal = profiles.filter(p => { const u=parseFloat(p.utilisation_pct||0); return u>=70&&u<=90; }).length;
+  const available = profiles.filter(p => parseFloat(p.utilisation_pct||0) < 70).length;
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>Team Utilisation</div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+        <div style={statBox}><div style={statValue}>{total}</div><div style={statLabel}>Total</div></div>
+        <div style={statBox}><div style={{...statValue, color:'var(--red)'}}>{overloaded}</div><div style={statLabel}>Overloaded</div></div>
+        <div style={statBox}><div style={{...statValue, color:'var(--amber)'}}>{optimal}</div><div style={statLabel}>Optimal</div></div>
+        <div style={statBox}><div style={{...statValue, color:'var(--green)'}}>{available}</div><div style={statLabel}>Available</div></div>
+      </div>
+    </div>
+  );
+}
+
+function SkillsGapWidget() {
+  const { data } = useQuery({ queryKey:['eng-skills-summary'], queryFn:()=>api.get('/admin/skills-summary').then(r=>r.data) });
+  if (!data) return null;
+  const top5 = (data.top_skills||[]).slice(0,5);
+  const maxCount = top5.length > 0 ? top5[0].count : 1;
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>Skills Gap Analysis</div>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
+        <span style={{ fontSize:12, color:'var(--grey-text)' }}>Total skills tracked: <strong style={{ color:'var(--navy)' }}>{data.total_skills}</strong></span>
+      </div>
+      {top5.map(s=>(
+        <div key={s.name} style={{ marginBottom:8 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3 }}>
+            <span style={{ color:'var(--navy)', fontWeight:700 }}>{s.name}</span>
+            <span style={{ color:'var(--grey-text)' }}>{s.count} associates</span>
+          </div>
+          <div style={{ height:6, background:'var(--grey-bg)', borderRadius:3 }}>
+            <div style={{ width:`${Math.round((s.count/maxCount)*100)}%`, height:'100%', background:'var(--navy)', borderRadius:3 }} />
+          </div>
+        </div>
+      ))}
+      {top5.length===0&&<div style={{ fontSize:12, color:'var(--grey-text)' }}>No skills data available.</div>}
+    </div>
+  );
+}
+
+function ProjectAllocationWidget() {
+  const { workspace } = useAuthStore();
+  const { data: projects=[] } = useQuery({
+    queryKey:['eng-active-projects', workspace?.id],
+    queryFn:()=>api.get('/projects', { params:{ workspace_id:workspace?.id, status:'active' } }).then(r=>r.data),
+    enabled:!!workspace?.id,
+  });
+  return (
+    <div style={cardStyle}>
+      <div style={widgetTitle}>Active Project Assignments</div>
+      {projects.length===0 ? (
+        <div style={{ fontSize:12, color:'var(--grey-text)' }}>No active projects.</div>
+      ) : (
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <thead>
+            <tr>{['Project','Members','Project Manager'].map(h=>(
+              <th key={h} style={{ padding:'6px 8px', fontSize:10, fontWeight:700, letterSpacing:0.5, textTransform:'uppercase', color:'var(--grey-text)', textAlign:'left', borderBottom:'1.5px solid var(--grey-border)' }}>{h}</th>
+            ))}</tr>
+          </thead>
+          <tbody>
+            {projects.map(p=>(
+              <tr key={p.id}>
+                <td style={{ padding:'7px 8px', fontSize:12, fontWeight:700, color:'var(--navy)', borderBottom:'1px solid var(--grey-bg)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <div style={{ width:6, height:6, borderRadius:'50%', background:p.color||'var(--navy)', flexShrink:0 }} />
+                    {p.name}
+                  </div>
+                </td>
+                <td style={{ padding:'7px 8px', fontSize:12, color:'var(--grey-text)', borderBottom:'1px solid var(--grey-bg)' }}>{p.member_count||0}</td>
+                <td style={{ padding:'7px 8px', fontSize:12, color:'var(--grey-text)', borderBottom:'1px solid var(--grey-bg)' }}>{p.pm_name||'—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function EngineeringDashboard() {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+      <TeamUtilisationWidget />
+      <SkillsGapWidget />
+      <div style={{ gridColumn:'span 2' }}><ProjectAllocationWidget /></div>
+    </div>
+  );
+}
+
 function ITDashboard() {
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
@@ -162,6 +257,7 @@ export default function ResourcesPage() {
   const [selected, setSelected] = useState(null);
   const isAdmin = user?.roles?.includes('admin');
   const isItWorkspace = workspace?.slug === 'it';
+  const isEngWorkspace = workspace?.slug === 'engineering';
 
   const { data: profiles=[], isLoading } = useQuery({
     queryKey: ['resources', search],
@@ -177,6 +273,7 @@ export default function ResourcesPage() {
   return (
     <div style={{ padding:28, display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
       {isItWorkspace && <ITDashboard />}
+      {isEngWorkspace && <EngineeringDashboard />}
       <div style={{ display:'flex', gap:20, flex:1, overflow:'hidden' }}>
       {/* List */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>

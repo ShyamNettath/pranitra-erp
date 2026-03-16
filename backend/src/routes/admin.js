@@ -12,6 +12,7 @@ router.get('/storage-usage', ctrl.getStorageUsage);
 router.get('/users-summary', ctrl.getUsersSummary);
 router.get('/system-health', ctrl.getSystemHealth);
 router.get('/db-stats', ctrl.getDbStats);
+router.get('/skills-summary', ctrl.getSkillsSummary);
 router.get('/recycle-bin', ctrl.getRecycleBin);
 router.post('/recycle-bin/:id/restore', ctrl.restoreFromRecycleBin);
 module.exports = router;
