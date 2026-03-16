@@ -166,7 +166,7 @@ exports.selectWorkspace = async (req, res, next) => {
     const refreshToken = makeRefreshToken(userId);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
-    await db('refresh_tokens').insert({ user_id: userId, token: refreshToken, expires_at: expiresAt, revoked: false, device_info: req.headers['user-agent'] || null });
+    await db('refresh_tokens').insert({ user_id: userId, token: refreshToken, expires_at: expiresAt, revoked: false, device_info: req.headers['user-agent'] || null }).onConflict('token').ignore();
     return res.json({ access_token: accessToken, refresh_token: refreshToken, workspace: { id: ws.id, name: ws.name, slug: ws.slug, color: ws.color, modules: ws.modules } });
   } catch (err) { next(err); }
 };
