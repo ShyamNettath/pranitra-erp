@@ -95,6 +95,8 @@ export default function AppShell() {
             <select
               value={workspace?.id || ''}
               onChange={(e) => selectWorkspace(e.target.value).then(() => navigate('/'))}
+              onMouseEnter={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
+              onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.08)'}
               style={{
                 padding: '6px 12px', background: 'rgba(255,255,255,0.08)',
                 border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
@@ -103,7 +105,7 @@ export default function AppShell() {
               }}
             >
               {workspaces.map((ws) => (
-                <option key={ws.id} value={ws.id}>{ws.name}</option>
+                <option key={ws.id} value={ws.id} style={{ background: '#1A1A2E', color: 'white' }}>{ws.name}</option>
               ))}
             </select>
           )}
