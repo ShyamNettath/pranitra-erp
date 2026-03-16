@@ -941,11 +941,12 @@ export default function AdminPage() {
 
   // Filter sections based on workspace context
   // super_user sees everything everywhere
-  // IT workspace: Access & Users + System (no Project Config)
+  // admin or IT workspace: Access & Users + System (no Project Config)
   // Non-IT workspaces: Project Config only
+  const isAdmin = user?.roles?.some(r => r === 'admin' || r === 'super_user');
   const visibleSections = isSuperUser
     ? ADMIN_SECTIONS
-    : isItWorkspace
+    : isAdmin || isItWorkspace
       ? ADMIN_SECTIONS.filter(s => s.group !== 'Project Config')
       : ADMIN_SECTIONS.filter(s => s.group === 'Project Config');
 
