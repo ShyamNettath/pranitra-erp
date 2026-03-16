@@ -6,6 +6,11 @@ services:
     image: postgres:16-alpine
     container_name: pranitra_db
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-files: "5"
     environment:
       POSTGRES_DB: ${DB_NAME:-pranitra}
       POSTGRES_USER: ${DB_USER:-pranitra}
@@ -30,6 +35,11 @@ services:
       dockerfile: Dockerfile
     container_name: pranitra_api
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-files: "5"
     depends_on:
       db:
         condition: service_healthy
@@ -77,6 +87,11 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
     container_name: pranitra_frontend
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-files: "5"
     networks:
       - pranitra_net
 
@@ -85,6 +100,11 @@ services:
     image: nginx:1.25-alpine
     container_name: pranitra_nginx
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-files: "5"
     depends_on:
       - api
       - frontend

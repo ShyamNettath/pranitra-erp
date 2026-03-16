@@ -5,7 +5,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const ctrl = require('../controllers/holidayController');
 const { addWorkingDays } = require('../utils/workingDays');
 
-const upload = multer({ dest: path.join(__dirname, '..', '..', 'uploads', 'tmp') });
+const upload = multer({ dest: path.join(__dirname, '..', '..', 'uploads', 'tmp'), limits: { fileSize: 10 * 1024 * 1024 } });
 
 router.use(authenticate);
 

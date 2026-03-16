@@ -1,13 +1,14 @@
 const router = require('express').Router();
 const { authenticate, requireRole } = require('../middleware/auth');
 const ctrl = require('../controllers/adminController');
-router.use(authenticate, requireRole('admin'));
+router.use(authenticate, requireRole('admin', 'super_user'));
 router.get('/settings', ctrl.getSettings);
 router.put('/settings', ctrl.updateSetting);
 router.get('/report-visibility', ctrl.getReportVisibility);
 router.put('/report-visibility', ctrl.updateReportVisibility);
 router.get('/audit-log', ctrl.getAuditLog);
 router.get('/system-info', ctrl.getSystemInfo);
+router.get('/storage-usage', ctrl.getStorageUsage);
 router.get('/recycle-bin', ctrl.getRecycleBin);
 router.post('/recycle-bin/:id/restore', ctrl.restoreFromRecycleBin);
 module.exports = router;

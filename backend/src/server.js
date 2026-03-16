@@ -22,8 +22,12 @@ app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) }
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ── Static uploads ───────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// ── Static uploads with cache headers ────────────────────────────
+app.use('/uploads/logos', express.static(path.join(__dirname, '..', 'uploads', 'logos'), { maxAge: '1d' }));
+app.use('/uploads/branding', express.static(path.join(__dirname, '..', 'uploads', 'branding'), { maxAge: '1d' }));
+app.use('/uploads/users', express.static(path.join(__dirname, '..', 'uploads', 'users'), { maxAge: '1d' }));
+app.use('/uploads/projects', express.static(path.join(__dirname, '..', 'uploads', 'projects'), { maxAge: '1h' }));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), { maxAge: '1h' }));
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
@@ -46,6 +50,7 @@ app.use('/api/settings',     require('./routes/settings'));
 app.use('/api/totp',         require('./routes/totp'));
 app.use('/api', require('./routes/lop'));
 app.use('/api', require('./routes/holidays'));
+app.use('/api/zoho',        require('./routes/zoho'));
 // ── 404 ───────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 

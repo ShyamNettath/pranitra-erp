@@ -14,7 +14,10 @@
       "Bash(node -c backend/src/middleware/auth.js 2>&1)",
       "Bash(node -c \"C:/ERP/pranitra/backend/src/controllers/authController.js\")",
       "Bash(node -c \"C:/ERP/pranitra/backend/src/config/migrate-runner.js\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('C:/ERP/pranitra/deploy.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('C:/ERP/pranitra/deploy.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(node -c \"C:/ERP/pranitra/backend/src/config/migrate-zoho-sync.js\" && echo \"migrate-zoho-sync OK\" && node -c \"C:/ERP/pranitra/backend/src/services/zohoService.js\" && echo \"zohoService OK\" && node -c \"C:/ERP/pranitra/backend/src/routes/zoho.js\" && echo \"zoho route OK\" && node -c \"C:/ERP/pranitra/backend/src/server.js\" && echo \"server OK\" && node -c \"C:/ERP/pranitra/backend/src/utils/scheduler.js\" && echo \"scheduler OK\" && node -c \"C:/ERP/pranitra/backend/src/config/migrate-runner.js\" && echo \"migrate-runner OK\")",
+      "Bash(find \"C:/ERP/pranitra/backend\" -name \"*.js\" -type f 2>/dev/null | head -40)",
+      "Bash(node -c \"C:/ERP/pranitra/backend/src/services/fileService.js\" && echo \"fileService OK\" && node -c \"C:/ERP/pranitra/backend/src/controllers/filesController.js\" && echo \"filesController OK\" && node -c \"C:/ERP/pranitra/backend/src/routes/settings.js\" && echo \"settings OK\" && node -c \"C:/ERP/pranitra/backend/src/config/migrate-file-optimisation.js\" && echo \"migration OK\" && node -c \"C:/ERP/pranitra/backend/src/services/cleanupService.js\" && echo \"cleanup OK\" && node -c \"C:/ERP/pranitra/backend/src/controllers/adminController.js\" && echo \"admin ctrl OK\" && node -c \"C:/ERP/pranitra/backend/src/routes/admin.js\" && echo \"admin route OK\" && node -c \"C:/ERP/pranitra/backend/src/server.js\" && echo \"server OK\" && node -c \"C:/ERP/pranitra/backend/src/utils/scheduler.js\" && echo \"scheduler OK\" && node -c \"C:/ERP/pranitra/backend/src/config/migrate-runner.js\" && echo \"runner OK\" && node -c \"C:/ERP/pranitra/backend/src/routes/holidays.js\" && echo \"holidays OK\")"
     ]
   }
 }

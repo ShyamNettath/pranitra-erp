@@ -1,27 +1,26 @@
 const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
-const crypto = require('crypto');
+const os = require('os');
 const fs = require('fs');
 const db = require('../config/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { processFile, validateFile } = require('../services/fileService');
 
-const uploadsDir = path.join(__dirname, '../../uploads/branding');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Upload to temp — fileService handles compression + placement
+const tmpDir = path.join(os.tmpdir(), 'pranitra-uploads');
+if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `logo_${crypto.randomUUID()}${ext}`);
-  },
+  destination: (_req, _file, cb) => cb(null, tmpDir),
+  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (/^image\/(png|jpeg|jpg)$/.test(file.mimetype)) cb(null, true);
-    else cb(new Error('Only PNG or JPG images are allowed'));
+    if (/^image\/(png|jpeg|jpg|webp)$/.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Only PNG, JPG, or WEBP images are allowed'));
   },
 });
 
@@ -45,7 +44,15 @@ router.post('/branding', authenticate, requireRole('admin', 'super_user'), uploa
     const { company_name, primary_color } = req.body;
 
     if (req.file) {
-      const logoUrl = `/uploads/branding/${req.file.filename}`;
+      const check = validateFile(req.file);
+      if (!check.valid) {
+        fs.unlink(req.file.path, () => {});
+        return res.status(422).json({ error: check.error });
+      }
+
+      const result = await processFile(req.file, { type: 'logo' });
+      const logoUrl = result.storagePath;
+
       const existing = await db('system_settings').where({ key: 'branding_logo' }).first();
       if (existing) {
         await db('system_settings').where({ key: 'branding_logo' }).update({ value: logoUrl });

@@ -75,12 +75,20 @@ cron.schedule('0 8 * * *', async () => {
   } catch (e) { logger.error('Overdue task notification error:', e); }
 });
 
+// ── Cleanup old soft-deleted records + stale notifications (daily at 03:00) ──
+cron.schedule('0 3 * * *', async () => {
+  try {
+    const { runCleanup } = require('../services/cleanupService');
+    await runCleanup();
+  } catch (e) { logger.error('Cleanup service error:', e); }
+});
+
 // ── Zoho People sync (every 24h at 06:00) ────────────────────────
 cron.schedule('0 6 * * *', async () => {
   if (!process.env.ZOHO_CLIENT_ID) return; // skip if not configured
   try {
-    const { syncFromZoho } = require('../services/zohoService');
-    await syncFromZoho();
+    const { syncAllEmployees } = require('../services/zohoService');
+    await syncAllEmployees();
   } catch (e) { logger.error('Zoho sync error:', e); }
 });
 

@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
 import useAuthStore from '@/store/authStore';
+import HREmployeesPanel from '@/pages/HREmployeesPage';
 
 const ADMIN_SECTIONS = [
   { key:'users',      label:'User Management',      group:'Access & Users' },
   { key:'workspaces', label:'Workspaces',            group:'Access & Users' },
   { key:'roles',      label:'Roles & Permissions',   group:'Access & Users' },
   { key:'audit',      label:'Audit Log',             group:'Access & Users' },
+  { key:'hr-employees', label:'HR Employees',        group:'Access & Users' },
   { key:'complexity', label:'Complexity Settings',   group:'Project Config' },
   { key:'lop-sections', label:'LOP Sections', group:'Project Config' },
   { key:'holidays',   label:'Holiday List',          group:'Project Config' },
@@ -767,7 +769,77 @@ function AuditPanel() {
   );
 }
 
+function StorageUsageSection() {
+  const { data: storage, refetch, isFetching } = useQuery({ queryKey:['storage-usage'], queryFn:()=>api.get('/admin/storage-usage').then(r=>r.data) });
+  if (!storage) return null;
+
+  const pct = storage.disk_usage_percent;
+  const barColor = pct > 85 ? 'var(--red)' : pct > 70 ? 'var(--amber)' : 'var(--green)';
+
+  const categories = [
+    { label:'Company Logos', mb:storage.logos_mb },
+    { label:'Project Files', mb:storage.project_files_mb },
+    { label:'User Avatars', mb:storage.user_avatars_mb },
+    { label:'HR Files', mb:storage.hr_files_mb },
+    { label:'Other', mb:Math.max(0, storage.uploads_total_mb - storage.logos_mb - storage.project_files_mb - storage.user_avatars_mb - storage.hr_files_mb) },
+  ];
+
+  return (
+    <div style={{ marginTop:24 }}>
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
+        <h3 style={{ fontSize:15,fontWeight:700,color:'var(--navy)',margin:0 }}>Storage Usage</h3>
+        <button onClick={()=>refetch()} disabled={isFetching} style={{ padding:'6px 14px',background:'var(--navy)',color:'white',border:'none',borderRadius:6,fontFamily:'var(--font)',fontSize:11,fontWeight:700,cursor:isFetching?'not-allowed':'pointer' }}>{isFetching?'Refreshing...':'Refresh'}</button>
+      </div>
+
+      {storage.total_disk_gb > 0 && (
+        <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:9,padding:'16px 18px',marginBottom:12 }}>
+          <div style={{ display:'flex',justifyContent:'space-between',marginBottom:8 }}>
+            <span style={{ fontSize:13,fontWeight:600,color:'var(--navy)' }}>Server Disk</span>
+            <span style={{ fontSize:13,fontWeight:700,color:barColor }}>{storage.used_disk_gb}GB used of {storage.total_disk_gb}GB ({pct}% full)</span>
+          </div>
+          <div style={{ height:10,background:'var(--grey-bg)',borderRadius:5,overflow:'hidden' }}>
+            <div style={{ width:`${Math.min(pct,100)}%`,height:'100%',background:barColor,borderRadius:5,transition:'width 0.3s' }}/>
+          </div>
+        </div>
+      )}
+
+      <div style={{ background:'white',border:'1px solid var(--grey-border)',borderRadius:9,overflow:'hidden' }}>
+        <table style={{ width:'100%',borderCollapse:'collapse',fontFamily:'var(--font)',fontSize:13 }}>
+          <thead>
+            <tr style={{ background:'var(--grey-bg)',borderBottom:'1px solid var(--grey-border)' }}>
+              <th style={{ padding:'10px 14px',textAlign:'left',fontSize:10,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)' }}>Category</th>
+              <th style={{ padding:'10px 14px',textAlign:'right',fontSize:10,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)' }}>Size</th>
+              <th style={{ padding:'10px 14px',textAlign:'right',fontSize:10,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'var(--grey-text)' }}>% of Uploads</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map(c=>(
+              <tr key={c.label} style={{ borderBottom:'1px solid var(--grey-border)' }}>
+                <td style={{ padding:'10px 14px',color:'var(--navy)',fontWeight:500 }}>{c.label}</td>
+                <td style={{ padding:'10px 14px',textAlign:'right',fontWeight:600 }}>{c.mb < 1 ? `${Math.round(c.mb*1024)} KB` : `${c.mb.toFixed(1)} MB`}</td>
+                <td style={{ padding:'10px 14px',textAlign:'right',color:'var(--grey-text)' }}>{storage.uploads_total_mb>0?((c.mb/storage.uploads_total_mb)*100).toFixed(1):'0'}%</td>
+              </tr>
+            ))}
+            <tr style={{ background:'var(--grey-bg)' }}>
+              <td style={{ padding:'10px 14px',fontWeight:700,color:'var(--navy)' }}>Total Uploads</td>
+              <td style={{ padding:'10px 14px',textAlign:'right',fontWeight:700,color:'var(--navy)' }}>{storage.uploads_total_mb.toFixed(1)} MB</td>
+              <td style={{ padding:'10px 14px',textAlign:'right',fontWeight:700 }}>100%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ fontSize:11,color:'var(--grey-text)',marginTop:8 }}>Last calculated: {new Date(storage.last_calculated_at).toLocaleString()}</div>
+    </div>
+  );
+}
+
 function SysInfoPanel() {
+  const { user, workspace } = useAuthStore();
+  const isItWorkspace = workspace?.slug === 'it';
+  const isSuperUser = user?.roles?.includes('super_user');
+  const showStorage = isItWorkspace || isSuperUser;
+
   const { data: info } = useQuery({ queryKey:['sysinfo'], queryFn:()=>api.get('/admin/system-info').then(r=>r.data) });
   if (!info) return null;
   return (
@@ -787,6 +859,8 @@ function SysInfoPanel() {
           </div>
         ))}
       </div>
+
+      {showStorage && <StorageUsageSection />}
     </div>
   );
 }
@@ -835,7 +909,8 @@ export default function AdminPage() {
         {section==='visibility' && <VisibilityPanel/>}
         {section==='audit'      && <AuditPanel/>}
         {section==='sysinfo'    && <SysInfoPanel/>}
-        {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo'].includes(section) && (
+        {section==='hr-employees' && <HREmployeesPanel/>}
+        {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo','hr-employees'].includes(section) && (
           <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)',fontSize:14 }}>
             {visibleSections.find(s=>s.key===section)?.label} — available in full deployment.
           </div>

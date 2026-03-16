@@ -21,6 +21,8 @@ const MIGRATIONS = [
   'migrate-project-fields.js',
   'migrate-milestones-commercial.js',
   'migrate-lop-sections.js',
+  'migrate-zoho-sync.js',
+  'migrate-file-optimisation.js',
 ];
 
 async function run() {
