@@ -253,13 +253,26 @@ class DeployApp(tk.Tk):
             deploy_cmd = (
                 f"cd {repo} && "
                 f"git pull origin main && "
-                f"docker compose up --build -d 2>&1"
+                f"docker compose up --build -d && "
+                f"sleep 8 && "
+                f"docker compose exec -T api node src/config/migrate-runner.js 2>&1"
             )
-            self._log(f"  Running: {deploy_cmd}", "info")
+            self._log(f"  Running: git pull + docker compose + auto migrations", "info")
             _, stdout, stderr = ssh.exec_command(deploy_cmd, timeout=300)
 
+            migration_started = False
             for line in stdout:
-                self._log("  " + line.rstrip(), "info")
+                clean = line.rstrip()
+                if any(word in clean.lower() for word in ["running migration", "migration complete", "already applied", "skipping", "migrate-runner"]):
+                    if not migration_started:
+                        self._log("\n── STEP 5: Run Migrations ───────────", "step")
+                        migration_started = True
+                    if "complete" in clean.lower() or "skipping" in clean.lower():
+                        self._log("  " + clean, "ok")
+                    else:
+                        self._log("  " + clean, "info")
+                else:
+                    self._log("  " + clean, "info")
             exit_code = stdout.channel.recv_exit_status()
             ssh.close()
 

@@ -792,19 +792,33 @@ function SysInfoPanel() {
 }
 
 export default function AdminPage() {
-  const [section, setSection] = useState('users');
+  const { user, workspace } = useAuthStore();
+  const isSuperUser = user?.roles?.includes('super_user');
+  const isItWorkspace = workspace?.slug === 'it';
 
-  const groups = [...new Set(ADMIN_SECTIONS.map(s=>s.group))];
+  // Filter sections based on workspace context
+  // super_user sees everything everywhere
+  // IT workspace: Access & Users + System (no Project Config)
+  // Non-IT workspaces: Project Config only
+  const visibleSections = isSuperUser
+    ? ADMIN_SECTIONS
+    : isItWorkspace
+      ? ADMIN_SECTIONS.filter(s => s.group !== 'Project Config')
+      : ADMIN_SECTIONS.filter(s => s.group === 'Project Config');
+
+  const [section, setSection] = useState(visibleSections[0]?.key || 'users');
+
+  const groups = [...new Set(visibleSections.map(s=>s.group))];
 
   return (
     <div style={{ padding:28, display:'flex', gap:20, height:'100%', overflow:'hidden' }}>
       {/* Left nav */}
       <div style={{ width:220,flexShrink:0,background:'white',border:'1px solid var(--grey-border)',borderRadius:10,padding:12,overflow:'auto' }}>
-        <div style={{ fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:'uppercase',color:'var(--grey-text)',padding:'6px 8px',marginBottom:4 }}>ADMIN PANEL</div>
+        <div style={{ fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:'uppercase',color:'var(--grey-text)',padding:'6px 8px',marginBottom:4 }}>{(isSuperUser || isItWorkspace) ? 'ADMIN PANEL' : 'SETTINGS'}</div>
         {groups.map(g=>(
           <div key={g}>
             <div style={{ fontSize:10,fontWeight:700,letterSpacing:1,textTransform:'uppercase',color:'#B0BAC8',padding:'10px 8px 4px' }}>{g}</div>
-            {ADMIN_SECTIONS.filter(s=>s.group===g).map(s=>(
+            {visibleSections.filter(s=>s.group===g).map(s=>(
               <button key={s.key} onClick={()=>setSection(s.key)} style={{ width:'100%',padding:'8px 10px',borderRadius:6,border:'none',background:section===s.key?'var(--navy-xlight)':'white',color:section===s.key?'var(--navy)':'var(--grey-text)',fontFamily:'var(--font)',fontSize:13,fontWeight:section===s.key?700:400,cursor:'pointer',textAlign:'left',marginBottom:2 }}>{s.label}</button>
             ))}
           </div>
@@ -823,7 +837,7 @@ export default function AdminPage() {
         {section==='sysinfo'    && <SysInfoPanel/>}
         {!['users','branding','security','lop-sections','holidays','visibility','audit','sysinfo'].includes(section) && (
           <div style={{ padding:40,textAlign:'center',color:'var(--grey-text)',fontSize:14 }}>
-            {ADMIN_SECTIONS.find(s=>s.key===section)?.label} — available in full deployment.
+            {visibleSections.find(s=>s.key===section)?.label} — available in full deployment.
           </div>
         )}
       </div>

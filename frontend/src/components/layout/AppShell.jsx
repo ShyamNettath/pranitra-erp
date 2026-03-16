@@ -17,6 +17,9 @@ export default function AppShell() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isAdminOrSuper = user?.roles?.some(r => r === 'admin' || r === 'super_user');
+  const isSuperUser = user?.roles?.includes('super_user');
+  const isItWorkspace = workspace?.slug === 'it';
+  const adminLabel = (isSuperUser || isItWorkspace) ? 'Admin Panel' : 'Settings';
 
   // User dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -210,7 +213,7 @@ export default function AppShell() {
                 textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden',
               })}>
                 <span style={{ fontSize: 14, flexShrink: 0 }}>⚙</span>
-                {sidebarOpen && 'Admin Panel'}
+                {sidebarOpen && adminLabel}
               </NavLink>
             )}
 

@@ -12,7 +12,9 @@
       "Bash(node -e \"try { require\\('./backend/src/routes/auth'\\); console.log\\('OK'\\) } catch\\(e\\) { console.error\\(e.message\\) }\")",
       "Bash(node -c backend/src/controllers/authController.js 2>&1)",
       "Bash(node -c backend/src/middleware/auth.js 2>&1)",
-      "Bash(node -c \"C:/ERP/pranitra/backend/src/controllers/authController.js\")"
+      "Bash(node -c \"C:/ERP/pranitra/backend/src/controllers/authController.js\")",
+      "Bash(node -c \"C:/ERP/pranitra/backend/src/config/migrate-runner.js\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('C:/ERP/pranitra/deploy.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }
