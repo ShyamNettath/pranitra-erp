@@ -102,8 +102,8 @@ exports.login = async (req, res, next) => {
  
 exports.verifyOtp = async (req, res, next) => {
   try {
-    const { user_id, code } = req.body;
-    if (!user_id || !code) return res.status(422).json({ error: 'user_id and code required' });
+    const { user_id, otp: code } = req.body;
+    if (!user_id || !code) return res.status(422).json({ error: 'user_id and otp required' });
  
     const record = await db('otp_codes')
       .where({ user_id, code, used: false })
@@ -147,10 +147,13 @@ exports.resendOtp = async (req, res, next) => {
 exports.selectWorkspace = async (req, res, next) => {
   try {
     const { workspace_id } = req.body;
+    if (!workspace_id) return res.status(422).json({ error: 'workspace_id is required' });
+
     const userId = req.user.sub || req.user.id;
+    const roles = req.user.roles || [];
+
     const ws = await db('workspaces').where({ id: workspace_id, is_active: true }).first();
     if (!ws) return res.status(404).json({ error: 'Workspace not found' });
-    const roles = req.user.roles;
 
     // Verify workspace access (super_user bypasses)
     if (!roles.includes('super_user')) {
@@ -177,6 +180,7 @@ exports.refresh = async (req, res, next) => {
     const record = await db('refresh_tokens').where({ token: refresh_token, revoked: false }).where('expires_at', '>', new Date()).first();
     if (!record) return res.status(401).json({ error: 'Refresh token revoked or expired' });
     const user = await db('users').where({ id: payload.sub, is_active: true }).first();
+    if (!user) return res.status(401).json({ error: 'User not found or inactive' });
     const roles = (await db('user_roles').where({ user_id: payload.sub }).select('role')).map(r => r.role);
     const accessToken = makeAccessToken(user.id, roles, null);
     return res.json({ access_token: accessToken });
@@ -191,14 +195,17 @@ exports.logout = async (req, res, next) => {
   } catch (err) { next(err); }
 };
  
-exports.me = async (req, res) => {
-  const userId = req.user.sub || req.user.id;
-  const user = await db('users').where({ id: userId }).first();
-  const roles = req.user.roles;
-  const workspaces = await getAccessibleWorkspaces(userId, roles);
-  delete user.password_hash;
-  delete user.totp_secret;
-  return res.json({ ...user, roles, workspaces, must_reset_password: !!user.must_reset_password });
+exports.me = async (req, res, next) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const user = await db('users').where({ id: userId }).first();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const roles = req.user.roles || [];
+    const workspaces = await getAccessibleWorkspaces(userId, roles);
+    delete user.password_hash;
+    delete user.totp_secret;
+    return res.json({ ...user, roles, workspaces, must_reset_password: !!user.must_reset_password });
+  } catch (err) { next(err); }
 };
  
 exports.forgotPassword = async (req, res) => res.json({ ok: true });
