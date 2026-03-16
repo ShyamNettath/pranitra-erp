@@ -116,13 +116,13 @@ async function processFile(file, opts = {}) {
     let pipeline = sharp(file.path);
 
     if (type === 'logo') {
-      pipeline = pipeline.resize({ width: 400, withoutEnlargement: true });
+      pipeline = pipeline.resize({ width: 400, height: 160, fit: 'inside', withoutEnlargement: true });
       pipeline = pipeline.webp({ quality: 85 });
     } else if (type === 'avatar') {
       pipeline = pipeline.resize({ width: 200, height: 200, fit: 'cover' });
       pipeline = pipeline.webp({ quality: 80 });
     } else {
-      pipeline = pipeline.resize({ width: 1920, withoutEnlargement: true });
+      pipeline = pipeline.resize({ width: 1200, withoutEnlargement: true });
       pipeline = pipeline.webp({ quality: 80 });
     }
 

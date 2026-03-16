@@ -23,11 +23,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Static uploads with cache headers ────────────────────────────
-app.use('/uploads/logos', express.static(path.join(__dirname, '..', 'uploads', 'logos'), { maxAge: '1d' }));
-app.use('/uploads/branding', express.static(path.join(__dirname, '..', 'uploads', 'branding'), { maxAge: '1d' }));
-app.use('/uploads/users', express.static(path.join(__dirname, '..', 'uploads', 'users'), { maxAge: '1d' }));
-app.use('/uploads/projects', express.static(path.join(__dirname, '..', 'uploads', 'projects'), { maxAge: '1h' }));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), { maxAge: '1h' }));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+  maxAge: '30d',
+  etag: true,
+  lastModified: true,
+}));
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
