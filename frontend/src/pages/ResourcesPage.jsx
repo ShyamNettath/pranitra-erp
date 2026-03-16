@@ -5,6 +5,35 @@ import useAuthStore from '@/store/authStore';
 
 const LEVEL_COLORS = { strong:'var(--green)', proficient:'var(--navy)', learning:'var(--amber)' };
 
+function ServerStorageWidget() {
+  const { data } = useQuery({
+    queryKey: ['server-storage'],
+    queryFn: () => api.get('/admin/storage-usage').then(r => r.data),
+  });
+  if (!data) return null;
+  const pct = data.disk_usage_percent || 0;
+  const barColor = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--amber)' : 'var(--green)';
+  return (
+    <div style={{ background:'white', border:'1px solid var(--grey-border)', borderRadius:10, padding:'16px 20px', marginBottom:16 }}>
+      <div style={{ fontSize:11, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'var(--grey-text)', marginBottom:12 }}>Server Storage</div>
+      <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:10 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ height:8, background:'var(--grey-bg)', borderRadius:4 }}>
+            <div style={{ width:`${Math.min(100, pct)}%`, height:'100%', background:barColor, borderRadius:4 }} />
+          </div>
+        </div>
+        <span style={{ fontSize:13, fontWeight:700, color:barColor, minWidth:40 }}>{pct.toFixed(0)}%</span>
+      </div>
+      <div style={{ display:'flex', gap:20, fontSize:12, color:'var(--grey-text)' }}>
+        <span>Total: <strong style={{ color:'var(--navy)' }}>{data.total_disk_gb} GB</strong></span>
+        <span>Used: <strong style={{ color:'var(--navy)' }}>{data.used_disk_gb} GB</strong></span>
+        <span>Free: <strong style={{ color:'var(--navy)' }}>{data.free_disk_gb} GB</strong></span>
+        <span>Uploads: <strong style={{ color:'var(--navy)' }}>{data.uploads_total_mb.toFixed(1)} MB</strong></span>
+      </div>
+    </div>
+  );
+}
+
 function UtilBar({ pct }) {
   const p = Math.min(100, Math.max(0, parseFloat(pct||0)));
   const color = p > 90 ? 'var(--red)' : p > 70 ? 'var(--amber)' : 'var(--green)';
@@ -19,10 +48,11 @@ function UtilBar({ pct }) {
 }
 
 export default function ResourcesPage() {
-  const { user } = useAuthStore();
+  const { user, workspace } = useAuthStore();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const isAdmin = user?.roles?.includes('admin');
+  const isItWorkspace = workspace?.slug === 'it';
 
   const { data: profiles=[], isLoading } = useQuery({
     queryKey: ['resources', search],
@@ -36,7 +66,9 @@ export default function ResourcesPage() {
   });
 
   return (
-    <div style={{ padding:28, display:'flex', gap:20, height:'100%', overflow:'hidden' }}>
+    <div style={{ padding:28, display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
+      {isItWorkspace && <ServerStorageWidget />}
+      <div style={{ display:'flex', gap:20, flex:1, overflow:'hidden' }}>
       {/* List */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
@@ -157,6 +189,7 @@ export default function ResourcesPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
