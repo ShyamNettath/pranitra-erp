@@ -39,7 +39,18 @@ router.get('/employees', requireRole('super_user', 'admin'), async (req, res, ne
     if (department) query = query.where('department', department);
 
     const offset = (Number(page) - 1) * Number(limit);
-    const [{ count }] = await query.clone().count('* as count');
+    const [{ count }] = await db('hr_employees').count('* as count').modify((qb) => {
+      if (search) {
+        qb.where(function () {
+          this.whereILike('full_name', `%${search}%`)
+              .orWhereILike('employee_id', `%${search}%`)
+              .orWhereILike('email', `%${search}%`)
+              .orWhereILike('department', `%${search}%`);
+        });
+      }
+      if (status) qb.where('employee_status', status);
+      if (department) qb.where('department', department);
+    });
     const rows = await query.offset(offset).limit(Number(limit));
 
     const employees = rows.map(emp => {
