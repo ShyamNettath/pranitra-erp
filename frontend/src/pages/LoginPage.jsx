@@ -55,7 +55,7 @@ export default function LoginPage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'var(--font)', background: '#FFFFFF' }}>
       {/* Tool name top left */}
       <div style={{ padding: '32px 0 0 48px' }}>
-        <span style={{ fontSize: 36, fontWeight: 800, color: '#000000', letterSpacing: -0.5 }}>usaha</span>
+        <span style={{ fontSize: 72, fontWeight: 800, color: '#000000', letterSpacing: -0.5 }}>usaha</span>
       </div>
 
       {/* Main content */}
@@ -151,8 +151,8 @@ export default function LoginPage() {
 
       {/* ── Footer ── */}
       <footer style={{
-        background: '#1B4D3E', padding: '16px 0',
-        textAlign: 'center', fontSize: 13, color: '#E8232A',
+        background: '#1B4D3E', padding: '16px 0 16px 48px',
+        textAlign: 'left', fontSize: 13, color: '#1B4D3E',
         flexShrink: 0,
       }}>
         &copy; NEUK NET-TECH
