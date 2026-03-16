@@ -10,11 +10,18 @@ const logger = require('./logger');
 async function seed() {
   logger.info('Seeding database...');
 
-  // ── Default workspace ────────────────────────────────────────
-  const [ws] = await db('workspaces')
-    .insert({ name: 'Engineering Division', slug: 'engineering', color: '#003264' })
-    .onConflict('slug').ignore()
-    .returning('id');
+  // ── Workspaces ──────────────────────────────────────────────
+  const workspaceDefs = [
+    { name: 'Engineering Division', slug: 'engineering', description: 'Engineering workspace', color: '#003264' },
+    { name: 'Finance',              slug: 'finance',     description: 'Finance workspace',     color: '#003264' },
+    { name: 'Human Resources',      slug: 'human-resources', description: 'HR workspace',      color: '#003264' },
+    { name: 'IT',                   slug: 'it',          description: 'IT workspace',           color: '#003264' },
+  ];
+  for (const wsDef of workspaceDefs) {
+    await db('workspaces').insert(wsDef).onConflict('slug').ignore();
+  }
+  const allWorkspaces = await db('workspaces').whereIn('slug', workspaceDefs.map(w => w.slug)).select('id');
+  const ws = await db('workspaces').where({ slug: 'engineering' }).first();
 
   // ── Admin user ───────────────────────────────────────────────
   const hash = await bcrypt.hash('Admin@1234', 12);
@@ -25,8 +32,16 @@ async function seed() {
 
   if (admin) {
     await db('user_roles').insert({ user_id: admin.id, role: 'admin' }).onConflict().ignore();
-    if (ws) {
-      await db('workspace_members').insert({ workspace_id: ws.id, user_id: admin.id }).onConflict().ignore();
+  }
+
+  // ── Auto-assign super_user and admin users to all workspaces ─
+  const privilegedUsers = await db('user_roles')
+    .whereIn('role', ['super_user', 'admin'])
+    .select('user_id');
+  const uniqueUserIds = [...new Set(privilegedUsers.map(r => r.user_id))];
+  for (const userId of uniqueUserIds) {
+    for (const wsRow of allWorkspaces) {
+      await db('workspace_members').insert({ workspace_id: wsRow.id, user_id: userId }).onConflict(['workspace_id', 'user_id']).ignore();
     }
   }
 
