@@ -66,8 +66,11 @@ router.get('/callback', async (req, res) => {
       return res.status(400).json({ error: 'Token exchange failed', details: data.error_description });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost';
-    res.send(`<!DOCTYPE html><html><body><script>window.opener.postMessage({ms_token:${JSON.stringify(data.access_token)}},${JSON.stringify(frontendUrl)});window.close();</script></body></html>`);
+    const token = data.access_token;
+    res.send(`<html><body><script>
+window.opener && window.opener.postMessage({ ms_token: ${JSON.stringify(token)} }, 'https://erp.pranitra.com');
+setTimeout(function(){ window.close(); }, 500);
+</script><p>Connected! You can close this window.</p></body></html>`);
   } catch (err) {
     res.status(500).json({ error: 'Token exchange failed' });
   }

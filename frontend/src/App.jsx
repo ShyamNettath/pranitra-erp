@@ -26,7 +26,8 @@ import AppShell        from '@/components/layout/AppShell';
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } });
 
 function RequireAuth({ children }) {
-  const { user, accessToken } = useAuthStore();
+  const { user, accessToken, isInitializing } = useAuthStore();
+  if (isInitializing) return null;
   if (!accessToken || !user) return <Navigate to="/login" replace />;
   return children;
 }

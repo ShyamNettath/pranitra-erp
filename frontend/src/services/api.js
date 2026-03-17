@@ -7,7 +7,7 @@ const api = axios.create({
 
 // ── Attach access token ─────────────────────────────────────────
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('pranitra_access_token');
+  const token = sessionStorage.getItem('pranitra_access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -37,7 +37,7 @@ api.interceptors.response.use(
       }
       original._retry = true;
       isRefreshing = true;
-      const refreshToken = localStorage.getItem('pranitra_refresh_token');
+      const refreshToken = sessionStorage.getItem('pranitra_refresh_token');
       if (!refreshToken) {
         isRefreshing = false;
         window.location.href = '/login';
@@ -45,13 +45,13 @@ api.interceptors.response.use(
       }
       try {
         const { data } = await axios.post('/api/auth/refresh', { refresh_token: refreshToken });
-        localStorage.setItem('pranitra_access_token', data.access_token);
+        sessionStorage.setItem('pranitra_access_token', data.access_token);
         processQueue(null, data.access_token);
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return api(original);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.clear();
+        sessionStorage.clear();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

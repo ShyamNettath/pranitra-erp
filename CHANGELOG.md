@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - fix Outlook callback HTML and page-refresh logout
+- Description: outlook.js callback now returns exact postMessage HTML targeting erp.pranitra.com with 500ms close delay. Auth tokens moved from localStorage to sessionStorage (clears on browser close, survives refresh). Added isInitializing flag to authStore so RequireAuth renders null instead of redirecting while loadMe() is in flight after a page refresh.
+- Lines Added: ~15
+- Lines Deleted: ~10
+- Lines Modified: 4
+- Files Changed: backend/src/routes/outlook.js, frontend/src/store/authStore.js, frontend/src/services/api.js, frontend/src/App.jsx
+
 ## [2026-03-17] - force reformat phone numbers via raw SQL and expand Notes textarea
 - Description: New migration migrate-fix-phone-format-v2.js runs a raw PostgreSQL UPDATE using substring/regexp_replace to reformat all rows not already matching '+91 % % %'. NotesCard outer div made flex-column so textarea can use flex:1 and minHeight:200px to fill its grid cell.
 - Lines Added: ~35
