@@ -14,7 +14,7 @@ async function migrate() {
   if (!hasNotes) {
     await db.schema.createTable('dashboard_notes', (t) => {
       t.increments('id').primary();
-      t.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
+      t.uuid('user_id').references('id').inTable('users').onDelete('CASCADE');
       t.text('content');
       t.timestamp('updated_at').defaultTo(db.fn.now());
     });

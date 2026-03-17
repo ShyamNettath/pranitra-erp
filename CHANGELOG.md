@@ -391,3 +391,10 @@
 - Lines Deleted: 0
 - Lines Modified: 1
 - Files Changed: backend/src/config/migrate-dashboard-notes.js, backend/src/config/migrate-runner.js, CHANGELOG.md
+
+## [2026-03-17] - fix dashboard migrations to use UUID for user_id
+- Description: Changed user_id column from INTEGER to UUID in both migrate-dashboard.js (dashboard_todos) and migrate-dashboard-notes.js (dashboard_notes) to match the users table which uses uuid primary keys. Also removed duplicate dashboard_notes creation from migrate-dashboard.js since it is handled by the dedicated migrate-dashboard-notes.js.
+- Lines Added: 0
+- Lines Deleted: 16
+- Lines Modified: 2
+- Files Changed: backend/src/config/migrate-dashboard.js, backend/src/config/migrate-dashboard-notes.js, CHANGELOG.md
