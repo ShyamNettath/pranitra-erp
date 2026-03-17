@@ -4,6 +4,7 @@ const path = require('path');
 const os = require('os');
 const { authenticate, requireRole } = require('../middleware/auth');
 const ctrl = require('../controllers/usersController');
+const db = require('../config/db');
 
 const upload = multer({
   dest: path.join(os.tmpdir(), 'pranitra-uploads'),
@@ -21,6 +22,17 @@ router.post('/bulk-upload', requireRole('admin'), upload.single('file'), ctrl.bu
 router.get('/:id', ctrl.get);
 router.post('/', requireRole('admin'), ctrl.create);
 router.put('/me/password', ctrl.changePassword);
+router.put('/me/ms-token', async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id;
+    const { ms_access_token, ms_refresh_token, ms_expires_in } = req.body;
+    const ms_token_expiry = ms_expires_in ? new Date(Date.now() + ms_expires_in * 1000) : null;
+    await db('users').where({ id: userId }).update({ ms_access_token, ms_refresh_token: ms_refresh_token || null, ms_token_expiry });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save MS token' });
+  }
+});
 router.put('/:id', requireRole('admin'), ctrl.update);
 router.put('/:id/workspaces', requireRole('super_user'), ctrl.updateWorkspaces);
 router.put('/:id/roles', requireRole('admin'), ctrl.updateRoles);

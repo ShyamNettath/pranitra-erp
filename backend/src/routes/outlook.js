@@ -28,6 +28,8 @@ router.get('/', (_req, res) => {
       response_mode: 'query',
     });
 
+    if (_req.query.login_hint) params.set('login_hint', _req.query.login_hint);
+
     const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params}`;
     res.redirect(url);
   } catch (err) {
@@ -66,9 +68,13 @@ router.get('/callback', async (req, res) => {
       return res.status(400).json({ error: 'Token exchange failed', details: data.error_description });
     }
 
-    const token = data.access_token;
+    const payload = {
+      ms_token:         data.access_token,
+      ms_refresh_token: data.refresh_token || null,
+      ms_expires_in:    data.expires_in    || null,
+    };
     res.send(`<html><body><script>
-window.opener && window.opener.postMessage({ ms_token: ${JSON.stringify(token)} }, 'https://erp.pranitra.com');
+window.opener && window.opener.postMessage(${JSON.stringify(payload)}, 'https://erp.pranitra.com');
 setTimeout(function(){ window.close(); }, 500);
 </script><p>Connected! You can close this window.</p></body></html>`);
   } catch (err) {

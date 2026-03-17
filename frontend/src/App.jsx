@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import '@/styles/globals.css';
@@ -24,6 +24,18 @@ import HREmployeesPage from '@/pages/HREmployeesPage';
 import AppShell        from '@/components/layout/AppShell';
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } });
+
+const AUTH_PATHS = ['/login', '/otp', '/mfa-verify', '/workspace', '/force-reset-password'];
+
+function RouteTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    if (!AUTH_PATHS.some(p => location.pathname.startsWith(p))) {
+      sessionStorage.setItem('pranitra_last_path', location.pathname + location.search);
+    }
+  }, [location]);
+  return null;
+}
 
 function RequireAuth({ children }) {
   const { user, accessToken, isInitializing } = useAuthStore();
@@ -77,6 +89,7 @@ export default function App() {
   return (
     <QueryClientProvider client={qc}>
       <BrowserRouter>
+        <RouteTracker />
         <Routes>
           {/* Auth flow */}
           <Route path="/login"     element={<LoginPage />} />

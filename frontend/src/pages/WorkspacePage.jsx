@@ -26,7 +26,8 @@ export default function WorkspacePage() {
     setError('');
     try {
       await selectWorkspace(selected);
-      navigate('/');
+      const lastPath = sessionStorage.getItem('pranitra_last_path');
+      navigate(lastPath || '/');
     } catch {
       setError('Failed to connect to workspace. Please try again.');
     }

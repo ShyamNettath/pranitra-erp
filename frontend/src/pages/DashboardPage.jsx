@@ -66,9 +66,10 @@ function groupByDate(list) {
 
 // ── Meetings card ────────────────────────────────────────────────
 function MeetingsCard() {
+  const user = useAuthStore(s => s.user);
   const [meetings, setMeetings] = useState(null);
-  const [error, setError] = useState(false);
-  const [msToken, setMsToken] = useState(() => localStorage.getItem('ms_access_token'));
+  const [fetchError, setFetchError] = useState(false);
+  const [msConnected, setMsConnected] = useState(!!user?.ms_connected);
   const [offset, setOffset] = useState(0); // days from today
 
   const canPrev = offset > -7;
@@ -77,41 +78,47 @@ function MeetingsCard() {
   const { start: rangeStart, end: rangeEnd } = getDateRange(offset);
   const rangeLabel = `${rangeStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${rangeEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
-  function doFetch(token, off) {
-    if (!token) return;
+  function doFetch(off) {
     setMeetings(null);
-    setError(false);
+    setFetchError(false);
     const { start, end } = getDateRange(off);
     api.get('/dashboard/meetings', {
-      headers: { Authorization: `Bearer ${token}` },
       params: { startDate: start.toISOString(), endDate: end.toISOString() },
     })
       .then(({ data }) => setMeetings(data))
       .catch((err) => {
-        if (err.response?.status === 401) {
-          localStorage.removeItem('ms_access_token');
-          setMsToken(null);
-        }
-        setError(true);
+        if (err.response?.status === 403) setMsConnected(false);
+        setFetchError(true);
       });
   }
 
-  // Fetch on mount (if token already exists) and whenever offset changes
+  // Fetch on mount if already connected
   useEffect(() => {
-    if (msToken) doFetch(msToken, offset);
+    if (msConnected) doFetch(0);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch when offset changes (only if connected)
+  useEffect(() => {
+    if (msConnected) doFetch(offset);
   }, [offset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openOutlookPopup = () => {
-    const popup = window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700,left=400,top=100');
+    const hint = encodeURIComponent(user?.email || '');
+    const popup = window.open(`/api/auth/outlook?login_hint=${hint}`, 'outlook_auth', 'width=600,height=700,left=400,top=100');
     const handler = (e) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.ms_token) {
-        const token = e.data.ms_token;
-        localStorage.setItem('ms_access_token', token);
+        const { ms_token, ms_refresh_token, ms_expires_in } = e.data;
         popup?.close();
         window.removeEventListener('message', handler);
-        setMsToken(token);
-        doFetch(token, offset); // immediate fetch — don't wait for React re-render cycle
+        api.put('/users/me/ms-token', {
+          ms_access_token:  ms_token,
+          ms_refresh_token: ms_refresh_token || null,
+          ms_expires_in:    ms_expires_in    || null,
+        }).catch(() => {}).finally(() => {
+          setMsConnected(true);
+          doFetch(offset);
+        });
       }
     };
     window.addEventListener('message', handler);
@@ -129,7 +136,7 @@ function MeetingsCard() {
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.2, color: NAVY, fontFamily: FONT }}>Your Meetings</div>
-        {msToken && (
+        {msConnected && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <button onClick={() => canPrev && setOffset(o => o - 1)} disabled={!canPrev} style={{ ...NAV_BTN, opacity: canPrev ? 1 : 0.3, cursor: canPrev ? 'pointer' : 'default' }}>‹</button>
             <span style={{ fontSize: 11, color: GREY, fontFamily: FONT, whiteSpace: 'nowrap', minWidth: 100, textAlign: 'center' }}>{rangeLabel}</span>
@@ -138,7 +145,7 @@ function MeetingsCard() {
         )}
       </div>
 
-      {!msToken ? (
+      {!msConnected ? (
         <button
           onClick={openOutlookPopup}
           title="Connect your Outlook calendar"
@@ -146,7 +153,7 @@ function MeetingsCard() {
         >
           Connect Outlook Calendar
         </button>
-      ) : error ? (
+      ) : fetchError ? (
         <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Could Not Load Meetings</div>
       ) : meetings === null ? (
         <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Loading...</div>

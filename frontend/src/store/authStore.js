@@ -83,6 +83,7 @@ const useAuthStore = create((set, get) => ({
     const { data } = await api.post('/auth/select-workspace', { workspace_id: workspaceId });
     sessionStorage.setItem('pranitra_access_token', data.access_token || sessionStorage.getItem('pranitra_access_token'));
     sessionStorage.setItem('pranitra_refresh_token', data.refresh_token || sessionStorage.getItem('pranitra_refresh_token'));
+    if (data.workspace) sessionStorage.setItem('pranitra_selected_workspace', JSON.stringify(data.workspace));
     set({ workspace: data.workspace, loginStep: 'done', isLoading: false });
     return data;
   },
@@ -91,7 +92,9 @@ const useAuthStore = create((set, get) => ({
   loadMe: async () => {
     try {
       const { data } = await api.get('/auth/me');
-      set({ user: data, workspaces: data.workspaces, isInitializing: false });
+      const savedWs = sessionStorage.getItem('pranitra_selected_workspace');
+      const workspace = savedWs ? JSON.parse(savedWs) : null;
+      set({ user: data, workspaces: data.workspaces, workspace, isInitializing: false });
     } catch {
       get().logout();
     }
@@ -102,6 +105,7 @@ const useAuthStore = create((set, get) => ({
     try { await api.post('/auth/logout', { refresh_token: refreshToken }); } catch {}
     sessionStorage.removeItem('pranitra_access_token');
     sessionStorage.removeItem('pranitra_refresh_token');
+    sessionStorage.removeItem('pranitra_selected_workspace');
     set({ user: null, workspace: null, accessToken: null, loginStep: 'credentials', isInitializing: false });
   },
 }));

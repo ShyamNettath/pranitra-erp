@@ -202,9 +202,13 @@ exports.me = async (req, res, next) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     const roles = req.user.roles || [];
     const workspaces = await getAccessibleWorkspaces(userId, roles);
+    const ms_connected = !!user.ms_access_token;
     delete user.password_hash;
     delete user.totp_secret;
-    return res.json({ ...user, roles, workspaces, must_reset_password: !!user.must_reset_password });
+    delete user.ms_access_token;
+    delete user.ms_refresh_token;
+    delete user.ms_token_expiry;
+    return res.json({ ...user, roles, workspaces, must_reset_password: !!user.must_reset_password, ms_connected });
   } catch (err) { next(err); }
 };
  

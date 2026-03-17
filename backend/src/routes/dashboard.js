@@ -26,14 +26,59 @@ router.get('/quote', authenticate, async (_req, res) => {
   }
 });
 
-// GET /api/dashboard/meetings — proxy to Microsoft Graph calendar
-router.get('/meetings', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid token' });
-  }
-
+// GET /api/dashboard/meetings — proxy to Microsoft Graph using DB-stored token
+router.get('/meetings', authenticate, async (req, res) => {
   try {
+    const userId = req.user.sub || req.user.id;
+    const userRow = await db('users')
+      .where({ id: userId })
+      .select('ms_access_token', 'ms_refresh_token', 'ms_token_expiry')
+      .first();
+
+    if (!userRow || !userRow.ms_access_token) {
+      return res.status(403).json({ error: 'no_ms_token' });
+    }
+
+    let token = userRow.ms_access_token;
+
+    // Auto-refresh if expired
+    if (userRow.ms_token_expiry && new Date(userRow.ms_token_expiry) < new Date()) {
+      if (!userRow.ms_refresh_token) {
+        await db('users').where({ id: userId }).update({ ms_access_token: null, ms_refresh_token: null, ms_token_expiry: null });
+        return res.status(403).json({ error: 'no_ms_token' });
+      }
+      try {
+        const tokenUrl = `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`;
+        const body = new URLSearchParams({
+          client_id:     process.env.MS_CLIENT_ID,
+          client_secret: process.env.MS_CLIENT_SECRET,
+          refresh_token: userRow.ms_refresh_token,
+          grant_type:    'refresh_token',
+          scope:         'Calendars.Read Tasks.Read offline_access openid profile',
+        });
+        const refreshResp = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+        });
+        const refreshData = await refreshResp.json();
+        if (refreshResp.ok && refreshData.access_token) {
+          token = refreshData.access_token;
+          const ms_token_expiry = refreshData.expires_in ? new Date(Date.now() + refreshData.expires_in * 1000) : null;
+          await db('users').where({ id: userId }).update({
+            ms_access_token: token,
+            ms_refresh_token: refreshData.refresh_token || userRow.ms_refresh_token,
+            ms_token_expiry,
+          });
+        } else {
+          await db('users').where({ id: userId }).update({ ms_access_token: null, ms_refresh_token: null, ms_token_expiry: null });
+          return res.status(403).json({ error: 'no_ms_token' });
+        }
+      } catch {
+        return res.status(500).json({ error: 'Failed to refresh MS token' });
+      }
+    }
+
     let start, end;
     if (req.query.startDate && req.query.endDate) {
       start = new Date(req.query.startDate).toISOString();
@@ -45,15 +90,17 @@ router.get('/meetings', async (req, res) => {
     }
 
     const graphUrl = `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start}&endDateTime=${end}`;
-    const response = await fetch(graphUrl, {
-      headers: { Authorization: authHeader },
-    });
+    const graphResp = await fetch(graphUrl, { headers: { Authorization: `Bearer ${token}` } });
 
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'Microsoft Graph API error' });
+    if (!graphResp.ok) {
+      if (graphResp.status === 401) {
+        await db('users').where({ id: userId }).update({ ms_access_token: null, ms_refresh_token: null, ms_token_expiry: null });
+        return res.status(403).json({ error: 'no_ms_token' });
+      }
+      return res.status(graphResp.status).json({ error: 'Microsoft Graph API error' });
     }
 
-    const data = await response.json();
+    const data = await graphResp.json();
     const meetings = (data.value || []).map(event => ({
       title: event.subject || 'Untitled',
       start: event.start?.dateTime || null,
