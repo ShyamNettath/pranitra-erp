@@ -24,6 +24,7 @@ const MIGRATIONS = [
   'migrate-zoho-sync.js',
   'migrate-file-optimisation.js',
   'migrate-workspace-modules.js',
+  'migrate-dashboard.js',
 ];
 
 async function run() {

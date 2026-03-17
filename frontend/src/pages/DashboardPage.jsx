@@ -111,33 +111,37 @@ function MeetingsCard() {
 }
 
 function TodoCard() {
-  const { user } = useAuthStore();
-  const storageKey = `todos_${user?.id}`;
-  const [todos, setTodos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(storageKey)) || []; } catch { return []; }
-  });
+  const [todos, setTodos] = useState([]);
   const [input, setInput] = useState('');
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(todos));
-  }, [todos, storageKey]);
+    api.get('/dashboard/todos')
+      .then(({ data }) => setTodos(data))
+      .catch(() => {});
+  }, []);
 
   function addTodo() {
     const text = input.trim();
     if (!text) return;
-    setTodos(prev => [...prev, { id: Date.now(), text, done: false }]);
+    api.post('/dashboard/todos', { text })
+      .then(({ data }) => setTodos(prev => [...prev, data]))
+      .catch(() => {});
     setInput('');
   }
 
   function toggleTodo(id) {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    api.patch(`/dashboard/todos/${id}`)
+      .then(({ data }) => setTodos(prev => prev.map(t => t.id === id ? data : t)))
+      .catch(() => {});
   }
 
   function deleteTodo(id) {
-    setTodos(prev => prev.filter(t => t.id !== id));
+    api.delete(`/dashboard/todos/${id}`)
+      .then(() => setTodos(prev => prev.filter(t => t.id !== id)))
+      .catch(() => {});
   }
 
-  const incomplete = todos.filter(t => !t.done).length;
+  const incomplete = todos.filter(t => !t.is_done).length;
 
   return (
     <div style={CARD}>
@@ -158,8 +162,8 @@ function TodoCard() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
         {todos.map(t => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #E8ECF0' }}>
-            <input type="checkbox" checked={t.done} onChange={() => toggleTodo(t.id)} style={{ cursor: 'pointer', accentColor: NAVY }} />
-            <span style={{ flex: 1, fontSize: 13, fontFamily: FONT, color: t.done ? GREY : '#333', textDecoration: t.done ? 'line-through' : 'none' }}>{t.text}</span>
+            <input type="checkbox" checked={t.is_done} onChange={() => toggleTodo(t.id)} style={{ cursor: 'pointer', accentColor: NAVY }} />
+            <span style={{ flex: 1, fontSize: 13, fontFamily: FONT, color: t.is_done ? GREY : '#333', textDecoration: t.is_done ? 'line-through' : 'none' }}>{t.text}</span>
             <button onClick={() => deleteTodo(t.id)} title="Delete task" style={{ background: 'none', border: 'none', color: GREY, cursor: 'pointer', fontSize: 16, padding: '0 4px', fontFamily: FONT }}>×</button>
           </div>
         ))}
@@ -177,11 +181,15 @@ function TodoCard() {
 }
 
 function NotesCard() {
-  const { user } = useAuthStore();
-  const storageKey = `notes_${user?.id}`;
-  const [notes, setNotes] = useState(() => localStorage.getItem(storageKey) || '');
+  const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(false);
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    api.get('/dashboard/notes')
+      .then(({ data }) => setNotes(data.content || ''))
+      .catch(() => {});
+  }, []);
 
   const handleChange = useCallback((e) => {
     const val = e.target.value;
@@ -189,10 +197,11 @@ function NotesCard() {
     setSaved(false);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      localStorage.setItem(storageKey, val);
-      setSaved(true);
+      api.put('/dashboard/notes', { content: val })
+        .then(() => setSaved(true))
+        .catch(() => {});
     }, 500);
-  }, [storageKey]);
+  }, []);
 
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
