@@ -21,7 +21,10 @@
       "Bash(find:*)",
       "Bash(pyinstaller:*)",
       "Bash(pip install:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(git log:*)",
+      "Bash(bash /tmp/gen_changelog.sh > /c/ERP/pranitra/CHANGELOG.md)",
+      "Bash(git add:*)"
     ]
   }
 }
