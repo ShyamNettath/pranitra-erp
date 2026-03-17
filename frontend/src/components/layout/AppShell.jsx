@@ -76,7 +76,7 @@ export default function AppShell() {
       {/* ── TOPBAR ─────────────────────────────────────── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0,
-        height: 'var(--topbar-h)', background: '#1A1A2E',
+        height: 'var(--topbar-h)', background: '#1B4D3E',
         display: 'flex', alignItems: 'center',
         padding: '0 20px 0 0', zIndex: 100,
         boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
@@ -105,13 +105,13 @@ export default function AppShell() {
               title="Switch workspace"
               style={{
                 padding: '6px 12px', background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
-                color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font)', fontSize: 12,
+                border: '1px solid white', borderRadius: 6,
+                color: 'white', fontFamily: 'var(--font)', fontSize: 12,
                 cursor: 'pointer',
               }}
             >
               {workspaces.map((ws) => (
-                <option key={ws.id} value={ws.id} style={{ background: '#1A1A2E', color: 'white' }}>{ws.name}</option>
+                <option key={ws.id} value={ws.id} style={{ background: '#1B4D3E', color: 'white' }}>{ws.name}</option>
               ))}
             </select>
           )}
@@ -122,7 +122,7 @@ export default function AppShell() {
               display: 'flex', alignItems: 'center', gap: 9,
               padding: '5px 10px 5px 6px',
               background: dropdownOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+              border: '1px solid white', borderRadius: 8,
               cursor: 'pointer',
             }} onClick={() => setDropdownOpen(!dropdownOpen)} title="Account menu">
               <div style={{
@@ -132,7 +132,7 @@ export default function AppShell() {
               }}>
                 {user?.name?.slice(0, 2).toUpperCase()}
               </div>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 12, color: 'white' }}>
                 {user?.name}
               </span>
             </div>
@@ -325,9 +325,9 @@ export default function AppShell() {
           </div>
           {/* Persistent footer */}
           <footer style={{
-            height: 32, flexShrink: 0, background: '#1A1A2E',
+            height: 32, flexShrink: 0, background: '#1B4D3E',
             display: 'flex', alignItems: 'center', paddingLeft: 32,
-            fontSize: 12, color: '#CCCCCC',
+            fontSize: 12, color: '#1B4D3E',
           }}>
             &copy; NEUK NET-TECH
           </footer>
