@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - fix usaha brand text colour and footer text invisibility
+- Description: Changed "usaha" brand text to #000000 in AppShell.jsx and WorkspacePage.jsx. Made footer text match footer background (invisible bar) in WorkspacePage.jsx (#1A1A2E on #1A1A2E), consistent with AppShell and LoginPage behaviour.
+- Lines Added: 0
+- Lines Deleted: 0
+- Lines Modified: 3
+- Files Changed: frontend/src/components/layout/AppShell.jsx, frontend/src/pages/WorkspacePage.jsx
+
 ## [2026-03-17] - fix navbar and footer colours to match login page dark green theme
 - Description: Changed top navbar background, workspace dropdown border/text, user name text, and footer background/text in AppShell.jsx to use the same dark green (#1B4D3E) as the LoginPage footer, ensuring consistent branding across all inner pages.
 - Lines Added: 0

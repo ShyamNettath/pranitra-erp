@@ -87,7 +87,7 @@ export default function AppShell() {
           display: 'flex', alignItems: 'center', padding: '0 20px',
           borderRight: '1px solid rgba(255,255,255,0.08)', height: '100%',
         }}>
-          <span style={{ color: 'white', fontWeight: 800, fontSize: 22, letterSpacing: -0.5 }}>usaha</span>
+          <span style={{ color: '#000000', fontWeight: 800, fontSize: 22, letterSpacing: -0.5 }}>usaha</span>
         </div>
 
         {/* Spacer — no nav items in topbar */}

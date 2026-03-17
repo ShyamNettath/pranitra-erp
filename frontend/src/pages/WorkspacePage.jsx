@@ -36,7 +36,7 @@ export default function WorkspacePage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'var(--font)', background: '#FFFFFF' }}>
       {/* Tool name top left */}
       <div style={{ padding: '32px 0 0 48px' }}>
-        <span style={{ fontSize: 36, fontWeight: 800, color: branding.primary_color || 'var(--primary-color)', letterSpacing: -0.5 }}>usaha</span>
+        <span style={{ fontSize: 36, fontWeight: 800, color: '#000000', letterSpacing: -0.5 }}>usaha</span>
       </div>
 
       {/* Main content */}
@@ -152,7 +152,7 @@ export default function WorkspacePage() {
       {/* Footer */}
       <footer style={{
         background: '#1A1A2E', padding: '16px 0',
-        textAlign: 'center', fontSize: 13, color: '#CCCCCC',
+        textAlign: 'center', fontSize: 13, color: '#1A1A2E',
         flexShrink: 0,
       }}>
         &copy; NEUK NET-TECH
