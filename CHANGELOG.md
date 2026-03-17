@@ -377,3 +377,10 @@
 - Lines Deleted: 75
 - Lines Modified: 0
 - Files Changed: nginx/nginx.conf, CHANGELOG.md
+
+## [2026-03-17] - use popup window for Outlook OAuth instead of page redirect
+- Description: OAuth flow now opens in a popup window. Backend callback returns an HTML page that posts the token to the parent via postMessage and closes itself. Frontend listens for the message event to receive the token. Main app never navigates away so the user stays logged in.
+- Lines Added: 14
+- Lines Deleted: 12
+- Lines Modified: 3
+- Files Changed: frontend/src/pages/DashboardPage.jsx, backend/src/routes/outlook.js, CHANGELOG.md

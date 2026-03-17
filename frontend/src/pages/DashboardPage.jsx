@@ -40,24 +40,25 @@ function useQuote() {
   return quote;
 }
 
+function openOutlookPopup() {
+  window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700');
+}
+
 function MeetingsCard() {
   const [meetings, setMeetings] = useState(null);
   const [error, setError] = useState(false);
   const [msToken, setMsToken] = useState(() => localStorage.getItem('ms_access_token'));
 
-  // On mount: capture ms_token from URL if present, save to localStorage, clean URL
+  // Listen for token from OAuth popup
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tokenFromUrl = params.get('ms_token');
-    if (tokenFromUrl) {
-      localStorage.setItem('ms_access_token', tokenFromUrl);
-      setMsToken(tokenFromUrl);
-      params.delete('ms_token');
-      const cleanUrl = params.toString()
-        ? `${window.location.pathname}?${params}`
-        : window.location.pathname;
-      window.history.replaceState({}, '', cleanUrl);
+    function handleMessage(e) {
+      if (e.data?.ms_token) {
+        localStorage.setItem('ms_access_token', e.data.ms_token);
+        setMsToken(e.data.ms_token);
+      }
     }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   // Fetch meetings from backend proxy when token is available
@@ -81,7 +82,7 @@ function MeetingsCard() {
       <div style={CARD_HEADER}>Your Meetings</div>
       {!msToken ? (
         <button
-          onClick={() => { window.location.assign('https://erp.pranitra.com/api/auth/outlook'); }}
+          onClick={openOutlookPopup}
           title="Connect your Outlook calendar"
           style={{ padding: '10px 20px', background: NAVY, color: 'white', border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
@@ -170,7 +171,7 @@ function TodoCard() {
         {todos.length === 0 && <div style={{ fontSize: 13, color: GREY, fontFamily: FONT, padding: '8px 0' }}>No Tasks Yet</div>}
       </div>
       <button
-        onClick={() => { if (!localStorage.getItem('ms_access_token')) window.location.assign('https://erp.pranitra.com/api/auth/outlook'); }}
+        onClick={() => { if (!localStorage.getItem('ms_access_token')) openOutlookPopup(); }}
         title="Sync tasks from Outlook"
         style={{ marginTop: 12, padding: '6px 14px', background: '#E8ECF0', color: GREY, border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
       >

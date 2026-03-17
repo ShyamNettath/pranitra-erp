@@ -45,7 +45,7 @@ router.get('/callback', async (req, res) => {
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost';
-    res.redirect(`${frontendUrl}/?ms_token=${encodeURIComponent(data.access_token)}`);
+    res.send(`<!DOCTYPE html><html><body><script>window.opener.postMessage({ms_token:${JSON.stringify(data.access_token)}},${JSON.stringify(frontendUrl)});window.close();</script></body></html>`);
   } catch (err) {
     res.status(500).json({ error: 'Token exchange failed' });
   }
