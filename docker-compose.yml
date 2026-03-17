@@ -1,7 +1,5 @@
 version: "3.9"
-
 services:
-  # ── PostgreSQL ──────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: pranitra_db
@@ -27,8 +25,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # ── Node.js / Express API ───────────────────────────────────────
   api:
     build:
       context: ./backend
@@ -81,8 +77,6 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
-
-  # ── React / Vite frontend (served by Nginx in prod) ─────────────
   frontend:
     build:
       context: ./frontend
@@ -98,8 +92,6 @@ services:
         max-file: "5"
     networks:
       - pranitra_net
-
-  # ── Nginx reverse proxy ─────────────────────────────────────────
   nginx:
     image: nginx:1.25-alpine
     container_name: pranitra_nginx
@@ -121,11 +113,9 @@ services:
       - uploads:/app/uploads:ro
     networks:
       - pranitra_net
-
 volumes:
   db_data:
   uploads:
-
 networks:
   pranitra_net:
     driver: bridge

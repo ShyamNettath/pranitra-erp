@@ -412,3 +412,10 @@
 - Lines Deleted: 9
 - Lines Modified: 10
 - Files Changed: frontend/src/pages/DashboardPage.jsx, CHANGELOG.md
+
+## [2026-03-17] - sync docker-compose.yml with server version
+- Description: Replaced docker-compose.yml with the exact version running on the server to eliminate recurring deploy conflicts. Removed service-level comments and blank lines between services to match server file exactly.
+- Lines Added: 0
+- Lines Deleted: 10
+- Lines Modified: 0
+- Files Changed: docker-compose.yml, CHANGELOG.md
