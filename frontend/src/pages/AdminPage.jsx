@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
 import useAuthStore from '@/store/authStore';
-import HREmployeesPanel from '@/pages/HREmployeesPage';
+import { HREmployeesPanel } from '@/pages/HREmployeesPage';
 
 const ADMIN_SECTIONS = [
   { key:'users',      label:'User Management',      group:'Access & Users' },

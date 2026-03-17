@@ -6,8 +6,9 @@ const FONT = 'Arial, sans-serif';
 const NAVY = '#003264';
 const GREY = '#8A9BB0';
 const CARD = { background: '#F5F7FA', padding: 20, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' };
-const CARD_HEADER = { fontSize: 12, fontWeight: 700, letterSpacing: 1.2, color: NAVY, marginBottom: 14, fontFamily: FONT };
+const CARD_HEADER = { fontSize: 12, fontWeight: 700, letterSpacing: 1.2, color: NAVY, marginBottom: 14, fontFamily: FONT, textTransform: 'uppercase' };
 
+// ── Quote hook ───────────────────────────────────────────────────
 function useQuote() {
   const [quote, setQuote] = useState(null);
 
@@ -40,6 +41,7 @@ function useQuote() {
   return quote;
 }
 
+// ── Meetings card ────────────────────────────────────────────────
 function MeetingsCard() {
   const [meetings, setMeetings] = useState(null);
   const [error, setError] = useState(false);
@@ -63,7 +65,6 @@ function MeetingsCard() {
     window.addEventListener('message', handler);
   };
 
-  // Fetch meetings from backend proxy when token is available
   useEffect(() => {
     if (!msToken) return;
     api.get('/dashboard/meetings', {
@@ -113,6 +114,7 @@ function MeetingsCard() {
   );
 }
 
+// ── To-Do card ───────────────────────────────────────────────────
 function TodoCard() {
   const [todos, setTodos] = useState([]);
   const [input, setInput] = useState('');
@@ -172,17 +174,11 @@ function TodoCard() {
         ))}
         {todos.length === 0 && <div style={{ fontSize: 13, color: GREY, fontFamily: FONT, padding: '8px 0' }}>No Tasks Yet</div>}
       </div>
-      <button
-        onClick={() => { if (!localStorage.getItem('ms_access_token')) window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700,left=400,top=100'); }}
-        title="Sync tasks from Outlook"
-        style={{ marginTop: 12, padding: '6px 14px', background: '#E8ECF0', color: GREY, border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-      >
-        Sync Outlook Tasks
-      </button>
     </div>
   );
 }
 
+// ── Notes card ───────────────────────────────────────────────────
 function NotesCard() {
   const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(false);
@@ -218,7 +214,7 @@ function NotesCard() {
         onChange={handleChange}
         placeholder="Write your notes here..."
         title="Personal notes"
-        rows={6}
+        rows={5}
         style={{ width: '100%', border: '1.5px solid #D8DDE6', borderRadius: 6, padding: 10, fontFamily: FONT, fontSize: 13, color: NAVY, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
       />
       {saved && <div style={{ fontSize: 11, color: GREY, marginTop: 4, fontFamily: FONT }}>Saved</div>}
@@ -226,9 +222,77 @@ function NotesCard() {
   );
 }
 
+// ── Emergency Contacts card ──────────────────────────────────────
+function EmergencyContactsCard() {
+  const [contacts, setContacts] = useState(null);
+
+  useEffect(() => {
+    api.get('/hr/emergency-contacts')
+      .then(({ data }) => setContacts(data))
+      .catch(() => setContacts([]));
+  }, []);
+
+  return (
+    <div style={CARD}>
+      <div style={CARD_HEADER}>Emergency Contacts</div>
+      {contacts === null ? (
+        <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Loading...</div>
+      ) : contacts.length === 0 ? (
+        <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>No Emergency Contacts Configured</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+          {contacts.map(c => (
+            <div key={c.id} style={{ background: 'white', borderRadius: 6, padding: '14px 16px', border: '1px solid #E0E4EB' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, fontFamily: FONT, marginBottom: 4 }}>{c.name}</div>
+              <div style={{ fontSize: 12, color: GREY, fontFamily: FONT, marginBottom: 6 }}>{c.role}</div>
+              <div style={{ fontSize: 13, color: '#333', fontFamily: FONT }}>{c.phone}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── My Day tab ───────────────────────────────────────────────────
+function MyDayTab() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+        <MeetingsCard />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <TodoCard />
+          <NotesCard />
+        </div>
+      </div>
+      <EmergencyContactsCard />
+    </div>
+  );
+}
+
+// ── Coming Soon placeholder ──────────────────────────────────────
+function ComingSoonTab() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
+      <div style={{ ...CARD, textAlign: 'center', padding: '40px 80px' }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: NAVY, fontFamily: FONT }}>Coming Soon</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard page ───────────────────────────────────────────────
+const TABS = [
+  { key: 'my-day',      label: 'My Day' },
+  { key: 'my-profile',  label: 'My Profile' },
+  { key: 'skills',      label: 'Skills Matrix' },
+  { key: 'performance', label: 'Performance & KPIs' },
+];
+
 export default function DashboardPage() {
   const { workspace, user } = useAuthStore();
   const quote = useQuote();
+  const [tab, setTab] = useState('my-day');
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -239,42 +303,69 @@ export default function DashboardPage() {
   })();
 
   return (
-    <div style={{ padding: 28, fontFamily: FONT, height: '100%', boxSizing: 'border-box' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 3, fontFamily: FONT }}>
-          {greeting}, {user?.name?.split(' ')[0]} 👋
-        </h1>
-        <p style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>
-          {workspace?.name} · {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
-      </div>
+    <div style={{ fontFamily: FONT, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
 
-      {/* 2-column grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '40% 60%', gap: 20, alignItems: 'start' }}>
-        {/* Left — Quote */}
-        <div style={{ ...CARD, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 300 }}>
-          {quote ? (
-            <>
-              <div style={{ fontSize: 20, fontWeight: 700, color: NAVY, lineHeight: 1.5, fontFamily: FONT, textAlign: 'center' }}>
-                &ldquo;{quote.text}&rdquo;
-              </div>
-              <div style={{ fontSize: 13, color: GREY, fontStyle: 'italic', textAlign: 'center', marginTop: 16, fontFamily: FONT }}>
-                — {quote.author}
-              </div>
-            </>
-          ) : (
-            <div style={{ fontSize: 14, color: GREY, textAlign: 'center', fontFamily: FONT }}>Loading Quote...</div>
-          )}
-        </div>
-
-        {/* Right — 3 stacked cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <MeetingsCard />
-          <TodoCard />
-          <NotesCard />
+      {/* ── Persistent Header ─────────────────────────── */}
+      <div style={{ margin: '20px 28px 0', ...CARD }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'center' }}>
+          {/* Left — greeting + date */}
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: NAVY, fontFamily: FONT, marginBottom: 6 }}>
+              {greeting}, {user?.name?.split(' ')[0]} 👋
+            </div>
+            <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>
+              {workspace?.name} · {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+          {/* Right — daily quote */}
+          <div>
+            {quote ? (
+              <>
+                <div style={{ fontSize: 13, color: NAVY, fontStyle: 'italic', fontFamily: FONT, lineHeight: 1.6 }}>
+                  &ldquo;{quote.text}&rdquo;
+                </div>
+                <div style={{ fontSize: 12, color: GREY, fontStyle: 'italic', fontFamily: FONT, marginTop: 6 }}>
+                  — {quote.author}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Loading Quote...</div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* ── Tab Bar ───────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 6, padding: '16px 28px 0', flexShrink: 0 }}>
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              padding: '9px 20px',
+              fontFamily: FONT,
+              fontSize: 13,
+              fontWeight: 600,
+              color: tab === t.key ? 'white' : '#555',
+              background: tab === t.key ? NAVY : '#EBEEF2',
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab Content ───────────────────────────────── */}
+      <div style={{ flex: 1, padding: '20px 28px 28px' }}>
+        {tab === 'my-day'      && <MyDayTab />}
+        {tab === 'my-profile'  && <ComingSoonTab />}
+        {tab === 'skills'      && <ComingSoonTab />}
+        {tab === 'performance' && <ComingSoonTab />}
+      </div>
+
     </div>
   );
 }

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - build Dashboard My Day tab, Emergency Contacts, and sidebar timezone bar
+- Description: Rebuilt DashboardPage with persistent header (greeting + quote), 4-tab bar (My Day active, others Coming Soon), and My Day content: 2-column Meetings/Todo+Notes layout plus full-width Emergency Contacts card. Added Emergency Contacts CRUD to HREmployeesPage (new tab, internal/external contact types, HR/Admin only write). Added real-time timezone bar at bottom of sidebar in AppShell. Backend: hr.js routes, migrate-emergency-contacts.js, migrate-timezones.js, GET /api/settings/timezones.
+- Lines Added: ~580
+- Lines Deleted: ~50
+- Lines Modified: ~8
+- Files Changed: frontend/src/pages/DashboardPage.jsx, frontend/src/pages/HREmployeesPage.jsx, frontend/src/pages/AdminPage.jsx, frontend/src/components/layout/AppShell.jsx, backend/src/routes/hr.js, backend/src/routes/settings.js, backend/src/server.js, backend/src/config/migrate-emergency-contacts.js, backend/src/config/migrate-timezones.js, backend/src/config/migrate-runner.js
+
 ## [2026-03-17] - fix usaha brand text colour and footer text invisibility
 - Description: Changed "usaha" brand text to #000000 in AppShell.jsx and WorkspacePage.jsx. Made footer text match footer background (invisible bar) in WorkspacePage.jsx (#1A1A2E on #1A1A2E), consistent with AppShell and LoginPage behaviour.
 - Lines Added: 0

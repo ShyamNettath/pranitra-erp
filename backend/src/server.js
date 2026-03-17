@@ -53,6 +53,7 @@ app.use('/api', require('./routes/lop'));
 app.use('/api', require('./routes/holidays'));
 app.use('/api/zoho',        require('./routes/zoho'));
 app.use('/api/dashboard',   require('./routes/dashboard'));
+app.use('/api/hr',          require('./routes/hr'));
 // ── 404 ───────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 

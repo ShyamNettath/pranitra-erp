@@ -26,6 +26,8 @@ const MIGRATIONS = [
   'migrate-workspace-modules.js',
   'migrate-dashboard.js',
   'migrate-dashboard-notes.js',
+  'migrate-emergency-contacts.js',
+  'migrate-timezones.js',
 ];
 
 async function run() {

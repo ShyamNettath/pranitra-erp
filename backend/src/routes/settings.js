@@ -24,6 +24,16 @@ const upload = multer({
   },
 });
 
+// GET /api/settings/timezones — public, no auth
+router.get('/timezones', async (_req, res, next) => {
+  try {
+    const timezones = await db('timezones')
+      .where({ is_active: true })
+      .orderBy('display_order', 'asc');
+    res.json(timezones);
+  } catch (err) { next(err); }
+});
+
 // GET /api/settings/branding — public, no auth
 router.get('/branding', async (_req, res, next) => {
   try {

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
 import useAuthStore from '@/store/authStore';
 
@@ -198,8 +198,8 @@ function DetailPanel({ employee, onClose, isSuperUser }) {
   );
 }
 
-// ── Main Panel ───────────────────────────────────────────────────
-export default function HREmployeesPanel() {
+// ── HR Employees Panel ───────────────────────────────────────────
+export function HREmployeesPanel() {
   const { user } = useAuthStore();
   const isSuperUser = user?.roles?.includes('super_user');
 
@@ -382,6 +382,253 @@ export default function HREmployeesPanel() {
       {selected && detail && (
         <DetailPanel employee={detail} onClose={() => setSelected(null)} isSuperUser={isSuperUser} />
       )}
+    </div>
+  );
+}
+
+// ── Emergency Contacts Panel ─────────────────────────────────────
+const FONT = 'Arial, sans-serif';
+const NAVY = '#003264';
+
+const EMPTY_FORM = { name: '', role: '', phone: '', display_order: 0, is_active: true, contact_type: 'external', user_id: '' };
+
+function EmergencyContactsPanel() {
+  const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const canWrite = user?.roles?.some(r => ['admin', 'super_user', 'hr'].includes(r));
+
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [users, setUsers] = useState([]);
+
+  const { data: contacts = [], isLoading } = useQuery({
+    queryKey: ['emergency-contacts'],
+    queryFn: () => api.get('/hr/emergency-contacts').then(r => r.data),
+  });
+
+  useEffect(() => {
+    if (showForm && form.contact_type === 'internal') {
+      api.get('/users').then(r => {
+        const list = Array.isArray(r.data) ? r.data : r.data?.users || [];
+        setUsers(list);
+      }).catch(() => {});
+    }
+  }, [showForm, form.contact_type]);
+
+  function openAdd() {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    setShowForm(true);
+  }
+
+  function openEdit(c) {
+    setEditing(c.id);
+    setForm({ name: c.name, role: c.role, phone: c.phone, display_order: c.display_order, is_active: c.is_active, contact_type: c.contact_type, user_id: c.user_id || '' });
+    setShowForm(true);
+  }
+
+  function handleUserSelect(e) {
+    const uid = e.target.value;
+    const u = users.find(x => String(x.id) === String(uid));
+    setForm(f => ({ ...f, user_id: uid, name: u?.name || f.name }));
+  }
+
+  async function handleSave() {
+    if (!form.name || !form.role || !form.phone) return;
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.put(`/hr/emergency-contacts/${editing}`, form);
+      } else {
+        await api.post('/hr/emergency-contacts', form);
+      }
+      queryClient.invalidateQueries({ queryKey: ['emergency-contacts'] });
+      setShowForm(false);
+    } catch {}
+    setSaving(false);
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm('Delete this contact?')) return;
+    await api.delete(`/hr/emergency-contacts/${id}`).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ['emergency-contacts'] });
+  }
+
+  const inputStyle = { height: 34, border: '1.5px solid #D8DDE6', borderRadius: 6, padding: '0 10px', fontFamily: FONT, fontSize: 13, color: NAVY, outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const labelStyle = { fontSize: 11, fontWeight: 700, letterSpacing: 0.8, color: '#8A9BB0', fontFamily: FONT, marginBottom: 4, display: 'block', textTransform: 'uppercase' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--navy)', margin: 0, fontFamily: FONT }}>Emergency Contacts</h2>
+          <div style={{ fontSize: 12, color: 'var(--grey-text)', marginTop: 2, fontFamily: FONT }}>{contacts.length} contacts configured</div>
+        </div>
+        {canWrite && (
+          <button onClick={openAdd} style={{ padding: '8px 16px', background: NAVY, color: 'white', border: 'none', borderRadius: 7, fontFamily: FONT, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            Add Contact
+          </button>
+        )}
+      </div>
+
+      <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+        {isLoading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--grey-text)', fontFamily: FONT }}>Loading...</div>
+        ) : contacts.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--grey-text)', fontSize: 13, fontFamily: FONT }}>No emergency contacts configured yet.</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT, fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: 'var(--grey-bg)', borderBottom: '1px solid var(--grey-border)' }}>
+                {['Order', 'Name', 'Role', 'Phone', 'Type', 'Active', ''].map(h => (
+                  <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--grey-text)', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {contacts.map(c => (
+                <tr key={c.id} style={{ borderBottom: '1px solid var(--grey-border)' }}>
+                  <td style={{ padding: '10px 12px', color: 'var(--grey-text)' }}>{c.display_order}</td>
+                  <td style={{ padding: '10px 12px', fontWeight: 600, color: NAVY }}>{c.name}</td>
+                  <td style={{ padding: '10px 12px', color: 'var(--grey-text)' }}>{c.role}</td>
+                  <td style={{ padding: '10px 12px' }}>{c.phone}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: c.contact_type === 'internal' ? '#E8F0FB' : '#F0F2F5', color: c.contact_type === 'internal' ? NAVY : '#555' }}>
+                      {c.contact_type === 'internal' ? 'Internal' : 'External'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <span style={{ color: c.is_active ? 'var(--green)' : 'var(--grey-text)', fontSize: 12, fontWeight: 700 }}>{c.is_active ? 'Yes' : 'No'}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    {canWrite && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => openEdit(c)} title="Edit" style={{ padding: '4px 10px', background: '#F0F2F5', border: 'none', borderRadius: 5, fontSize: 12, cursor: 'pointer', fontFamily: FONT }}>Edit</button>
+                        <button onClick={() => handleDelete(c.id)} title="Delete" style={{ padding: '4px 10px', background: '#FEE8E8', color: 'var(--red)', border: 'none', borderRadius: 5, fontSize: 12, cursor: 'pointer', fontFamily: FONT }}>Delete</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Add / Edit form modal */}
+      {showForm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)' }} onClick={() => setShowForm(false)} />
+          <div style={{ position: 'relative', width: 480, background: 'white', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', padding: 28 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, fontFamily: FONT, marginBottom: 20 }}>
+              {editing ? 'Edit Contact' : 'Add Emergency Contact'}
+            </div>
+
+            {/* Internal / External toggle */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Contact Type</label>
+              <div style={{ display: 'flex', gap: 16 }}>
+                {['internal', 'external'].map(type => (
+                  <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: FONT, cursor: 'pointer' }}>
+                    <input type="radio" name="contact_type" value={type} checked={form.contact_type === type} onChange={() => setForm(f => ({ ...f, contact_type: type, user_id: '', name: '', role: '', phone: '' })) } />
+                    {type === 'internal' ? 'Internal (System User)' : 'External'}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Internal: user search dropdown */}
+            {form.contact_type === 'internal' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Select User</label>
+                <select value={form.user_id} onChange={handleUserSelect} style={{ ...inputStyle, height: 36, background: 'white' }}>
+                  <option value="">— Select a user —</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Name */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Name</label>
+              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} placeholder="Full name" />
+            </div>
+
+            {/* Role */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Role</label>
+              <input value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} style={inputStyle} placeholder="e.g. HR Manager, Security, Hospital" />
+            </div>
+
+            {/* Phone */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Phone</label>
+              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} style={inputStyle} placeholder="+91 XXXXX XXXXX" />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Display Order</label>
+                <input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: Number(e.target.value) }))} style={inputStyle} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontFamily: FONT, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} style={{ accentColor: NAVY }} />
+                  Active
+                </label>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setShowForm(false)} style={{ padding: '8px 18px', background: '#F0F2F5', border: 'none', borderRadius: 7, fontFamily: FONT, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSave} disabled={saving || !form.name || !form.role || !form.phone} style={{ padding: '8px 20px', background: NAVY, color: 'white', border: 'none', borderRadius: 7, fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: (!form.name || !form.role || !form.phone) ? 0.5 : 1 }}>
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── HR Page (tabbed) — default export ────────────────────────────
+const HR_TABS = [
+  { key: 'employees',          label: 'Employees' },
+  { key: 'emergency-contacts', label: 'Emergency Contacts' },
+];
+
+export default function HREmployeesPage() {
+  const [tab, setTab] = useState('employees');
+
+  return (
+    <div style={{ padding: 24, fontFamily: FONT }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--grey-border)', paddingBottom: 0 }}>
+        {HR_TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              padding: '9px 20px',
+              fontFamily: FONT,
+              fontSize: 13,
+              fontWeight: 600,
+              color: tab === t.key ? 'white' : '#555',
+              background: tab === t.key ? NAVY : '#EBEEF2',
+              border: 'none',
+              borderRadius: '6px 6px 0 0',
+              cursor: 'pointer',
+              marginBottom: -1,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === 'employees'          && <HREmployeesPanel />}
+      {tab === 'emergency-contacts' && <EmergencyContactsPanel />}
     </div>
   );
 }

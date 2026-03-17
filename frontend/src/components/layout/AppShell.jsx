@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '@/store/authStore';
 import api from '@/services/api';
@@ -31,6 +31,31 @@ export default function AppShell() {
   // User dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Timezones
+  const [timezones, setTimezones] = useState([]);
+  const [tzTimes, setTzTimes] = useState({});
+
+  useEffect(() => {
+    api.get('/settings/timezones').then(r => {
+      setTimezones(r.data || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (timezones.length === 0) return;
+    function tick() {
+      const now = new Date();
+      const map = {};
+      timezones.forEach(tz => {
+        map[tz.id] = now.toLocaleTimeString('en-GB', { timeZone: tz.timezone, hour: '2-digit', minute: '2-digit' });
+      });
+      setTzTimes(map);
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [timezones]);
 
   // Change password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -301,6 +326,26 @@ export default function AppShell() {
               </NavLink>
             )}
           </div>
+
+          {/* Timezone bar */}
+          {sidebarOpen && timezones.length > 0 && (
+            <div style={{
+              background: '#1A1A2E', height: 40, flexShrink: 0,
+              display: 'flex', alignItems: 'center', padding: '0 12px',
+              gap: 0, overflow: 'hidden',
+            }}>
+              {timezones.map((tz, i) => (
+                <React.Fragment key={tz.id}>
+                  {i > 0 && <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 8px', fontSize: 11 }}>|</span>}
+                  <span style={{ fontSize: 11, color: 'white', fontFamily: 'Arial, sans-serif', whiteSpace: 'nowrap' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{tz.label}</span>
+                    {' '}
+                    <span style={{ fontWeight: 700 }}>{tzTimes[tz.id] || '—'}</span>
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
 
           {/* Collapse toggle */}
           <div style={{
