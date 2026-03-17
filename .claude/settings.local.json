@@ -25,7 +25,9 @@
       "Bash(git log:*)",
       "Bash(bash /tmp/gen_changelog.sh > /c/ERP/pranitra/CHANGELOG.md)",
       "Bash(git add:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(ls:*)",
+      "Bash(ssh:*)"
     ]
   }
 }
