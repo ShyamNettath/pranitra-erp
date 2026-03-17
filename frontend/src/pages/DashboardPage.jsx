@@ -233,22 +233,31 @@ function EmergencyContactsCard() {
   }, []);
 
   return (
-    <div style={CARD}>
+    <div style={{ ...CARD, height: '100%', boxSizing: 'border-box' }}>
       <div style={CARD_HEADER}>Emergency Contacts</div>
       {contacts === null ? (
         <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Loading...</div>
       ) : contacts.length === 0 ? (
         <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>No Emergency Contacts Configured</div>
       ) : (
-        <div style={{ maxHeight: 200, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-          {contacts.map(c => (
-            <div key={c.id} style={{ background: 'white', borderRadius: 6, padding: '14px 16px', border: '1px solid #E0E4EB' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, fontFamily: FONT, marginBottom: 4 }}>{c.name}</div>
-              <div style={{ fontSize: 12, color: GREY, fontFamily: FONT, marginBottom: 6 }}>{c.role}</div>
-              <div style={{ fontSize: 13, color: '#333', fontFamily: FONT }}>{c.phone}</div>
-            </div>
-          ))}
-        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT, fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: NAVY }}>
+              {['Name', 'Role', 'Phone'].map(h => (
+                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: 'white', fontWeight: 700, fontSize: 12 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {contacts.map(c => (
+              <tr key={c.id} style={{ borderBottom: '1px solid #E8ECF0' }}>
+                <td style={{ padding: '9px 12px', fontWeight: 700, color: NAVY }}>{c.name}</td>
+                <td style={{ padding: '9px 12px', color: GREY }}>{c.role}</td>
+                <td style={{ padding: '9px 12px', color: '#333' }}>{c.phone}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );
@@ -257,12 +266,12 @@ function EmergencyContactsCard() {
 // ── My Day tab ───────────────────────────────────────────────────
 function MyDayTab() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 300 }}>
         <MeetingsCard />
         <EmergencyContactsCard />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 300 }}>
         <TodoCard />
         <NotesCard />
       </div>

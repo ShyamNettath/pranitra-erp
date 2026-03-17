@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - fix Emergency Contacts table layout and responsive grid
+- Description: Replaced Emergency Contacts card grid with a clean table (Name/Role/Phone columns, navy header, subtle row borders). MyDayTab grid changed to repeat(auto-fit, minmax(400px, 1fr)) so it is 2-column on wide screens and drops to 1 column on narrow screens. Each column container has minHeight: 300px.
+- Lines Added: 0
+- Lines Deleted: 0
+- Lines Modified: 2
+- Files Changed: frontend/src/pages/DashboardPage.jsx
+
 ## [2026-03-17] - fix Emergency Contacts card width and scrolling
 - Description: Moved Emergency Contacts card into the left column below Meetings (matching its width instead of spanning full page). Added max-height:200px and overflow-y:auto to the contacts grid so overflow scrolls internally while the heading stays fixed.
 - Lines Added: 0
