@@ -350,3 +350,10 @@
 - Lines Modified: 0
 - Files Changed: backend/.env.example, .env.example, CHANGELOG.md
 
+## [2026-03-17] - add Microsoft Outlook OAuth env vars to docker-compose
+- Description: Added MS_CLIENT_ID, MS_TENANT_ID, MS_CLIENT_SECRET, MS_REDIRECT_URI to docker-compose.yml api service environment section
+- Lines Added: 4
+- Lines Deleted: 0
+- Lines Modified: 0
+- Files Changed: docker-compose.yml, CHANGELOG.md
+

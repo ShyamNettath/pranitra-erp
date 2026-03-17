@@ -68,6 +68,10 @@ services:
       ZOHO_CLIENT_SECRET: ${ZOHO_CLIENT_SECRET:-}
       ZOHO_REFRESH_TOKEN: ${ZOHO_REFRESH_TOKEN:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_TENANT_ID: ${MS_TENANT_ID:-}
+      MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
+      MS_REDIRECT_URI: ${MS_REDIRECT_URI:-}
     volumes:
       - uploads:/app/uploads
     networks:
