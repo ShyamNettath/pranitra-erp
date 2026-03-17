@@ -3,6 +3,7 @@
  * Creates dashboard_todos and dashboard_notes tables.
  * Run: node src/config/migrate-dashboard.js
  */
+require('dotenv').config();
 const db = require('./db');
 const logger = require('./logger');
 

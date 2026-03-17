@@ -33,6 +33,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
 
 // ── API Routes ───────────────────────────────────────────────────
+app.use('/api/auth/outlook', require('./routes/outlook'));
 app.use('/api/auth',        require('./routes/auth'));
 app.use('/api/workspaces',  require('./routes/workspaces'));
 app.use('/api/users',       require('./routes/users'));
@@ -52,7 +53,6 @@ app.use('/api', require('./routes/lop'));
 app.use('/api', require('./routes/holidays'));
 app.use('/api/zoho',        require('./routes/zoho'));
 app.use('/api/dashboard',   require('./routes/dashboard'));
-app.use('/api/auth/outlook', require('./routes/outlook'));
 // ── 404 ───────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 
