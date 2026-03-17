@@ -357,3 +357,9 @@
 - Lines Modified: 0
 - Files Changed: docker-compose.yml, CHANGELOG.md
 
+## [2026-03-17] - fix max-files typo in docker-compose logging config
+- Description: Renamed max-files to max-file (singular) in all 4 service logging options — the correct Docker json-file driver option name
+- Lines Added: 0
+- Lines Deleted: 0
+- Lines Modified: 4
+- Files Changed: docker-compose.yml, CHANGELOG.md
