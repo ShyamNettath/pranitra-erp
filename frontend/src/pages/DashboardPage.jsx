@@ -81,7 +81,7 @@ function MeetingsCard() {
       <div style={CARD_HEADER}>Your Meetings</div>
       {!msToken ? (
         <button
-          onClick={() => { window.location.href = '/api/auth/outlook'; }}
+          onClick={() => { window.location.assign('https://erp.pranitra.com/api/auth/outlook'); }}
           title="Connect your Outlook calendar"
           style={{ padding: '10px 20px', background: NAVY, color: 'white', border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
@@ -170,7 +170,7 @@ function TodoCard() {
         {todos.length === 0 && <div style={{ fontSize: 13, color: GREY, fontFamily: FONT, padding: '8px 0' }}>No Tasks Yet</div>}
       </div>
       <button
-        onClick={() => { if (!localStorage.getItem('ms_access_token')) window.location.href = '/api/auth/outlook'; }}
+        onClick={() => { if (!localStorage.getItem('ms_access_token')) window.location.assign('https://erp.pranitra.com/api/auth/outlook'); }}
         title="Sync tasks from Outlook"
         style={{ marginTop: 12, padding: '6px 14px', background: '#E8ECF0', color: GREY, border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
       >

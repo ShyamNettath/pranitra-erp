@@ -363,3 +363,10 @@
 - Lines Deleted: 0
 - Lines Modified: 4
 - Files Changed: docker-compose.yml, CHANGELOG.md
+
+## [2026-03-17] - fix Outlook OAuth redirect causing unintended logout
+- Description: Changed OAuth button from window.location.href to window.location.assign with full URL to avoid axios interceptor interference. Added condition in axios 401 handler to skip refresh/logout for /auth/outlook requests.
+- Lines Added: 1
+- Lines Deleted: 0
+- Lines Modified: 3
+- Files Changed: frontend/src/pages/DashboardPage.jsx, frontend/src/services/api.js, CHANGELOG.md
