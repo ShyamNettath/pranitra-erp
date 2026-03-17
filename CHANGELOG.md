@@ -370,3 +370,10 @@
 - Lines Deleted: 0
 - Lines Modified: 3
 - Files Changed: frontend/src/pages/DashboardPage.jsx, frontend/src/services/api.js, CHANGELOG.md
+
+## [2026-03-17] - replace nginx.conf with SSL termination and HTTPS redirect
+- Description: Replaced nginx.conf entirely — added HTTPS server block with SSL certs, HTTP-to-HTTPS 301 redirect, set server_name to erp.pranitra.com, removed old security headers and cache directives in favour of simplified proxy config
+- Lines Added: 28
+- Lines Deleted: 75
+- Lines Modified: 0
+- Files Changed: nginx/nginx.conf, CHANGELOG.md
