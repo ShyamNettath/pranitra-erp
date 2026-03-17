@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - fix Emergency Contacts card width and scrolling
+- Description: Moved Emergency Contacts card into the left column below Meetings (matching its width instead of spanning full page). Added max-height:200px and overflow-y:auto to the contacts grid so overflow scrolls internally while the heading stays fixed.
+- Lines Added: 0
+- Lines Deleted: 0
+- Lines Modified: 2
+- Files Changed: frontend/src/pages/DashboardPage.jsx
+
 ## [2026-03-17] - fix timezone bar always visible across all pages
 - Description: Nav items div in AppShell sidebar was missing minHeight:0 and overflowY:auto, causing it to grow past its flex-allocated space on pages with taller nav lists and pushing the timezone bar off-screen (clipped by overflow:hidden on the aside). Adding those two properties ensures the nav area scrolls internally and the timezone bar is always pinned at the bottom of the sidebar.
 - Lines Added: 0

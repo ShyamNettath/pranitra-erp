@@ -240,7 +240,7 @@ function EmergencyContactsCard() {
       ) : contacts.length === 0 ? (
         <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>No Emergency Contacts Configured</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+        <div style={{ maxHeight: 200, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
           {contacts.map(c => (
             <div key={c.id} style={{ background: 'white', borderRadius: 6, padding: '14px 16px', border: '1px solid #E0E4EB' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, fontFamily: FONT, marginBottom: 4 }}>{c.name}</div>
@@ -257,15 +257,15 @@ function EmergencyContactsCard() {
 // ── My Day tab ───────────────────────────────────────────────────
 function MyDayTab() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <MeetingsCard />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <TodoCard />
-          <NotesCard />
-        </div>
+        <EmergencyContactsCard />
       </div>
-      <EmergencyContactsCard />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <TodoCard />
+        <NotesCard />
+      </div>
     </div>
   );
 }
