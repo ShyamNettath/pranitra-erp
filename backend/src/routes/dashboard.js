@@ -34,9 +34,15 @@ router.get('/meetings', async (req, res) => {
   }
 
   try {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+    let start, end;
+    if (req.query.startDate && req.query.endDate) {
+      start = new Date(req.query.startDate).toISOString();
+      end   = new Date(req.query.endDate).toISOString();
+    } else {
+      const now = new Date();
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+      end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+    }
 
     const graphUrl = `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start}&endDateTime=${end}`;
     const response = await fetch(graphUrl, {

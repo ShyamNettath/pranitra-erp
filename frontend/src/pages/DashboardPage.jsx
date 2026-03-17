@@ -41,34 +41,50 @@ function useQuote() {
   return quote;
 }
 
+// ── Meetings helpers ─────────────────────────────────────────────
+function getDateRange(offset) {
+  const start = new Date();
+  start.setDate(start.getDate() + offset);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function groupByDate(list) {
+  const groups = {};
+  for (const m of list) {
+    const key = m.start
+      ? new Date(m.start).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+      : 'Unscheduled';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(m);
+  }
+  return groups;
+}
+
 // ── Meetings card ────────────────────────────────────────────────
 function MeetingsCard() {
   const [meetings, setMeetings] = useState(null);
   const [error, setError] = useState(false);
   const [msToken, setMsToken] = useState(() => localStorage.getItem('ms_access_token'));
+  const [offset, setOffset] = useState(0); // days from today
 
-  const openOutlookPopup = () => {
-    const popup = window.open(
-      '/api/auth/outlook',
-      'outlook_auth',
-      'width=600,height=700,left=400,top=100'
-    );
-    const handler = (e) => {
-      if (e.origin !== window.location.origin) return;
-      if (e.data?.ms_token) {
-        localStorage.setItem('ms_access_token', e.data.ms_token);
-        popup?.close();
-        window.removeEventListener('message', handler);
-        setMsToken(e.data.ms_token);
-      }
-    };
-    window.addEventListener('message', handler);
-  };
+  const canPrev = offset > -7;
+  const canNext = offset < 14;
 
-  useEffect(() => {
-    if (!msToken) return;
+  const { start: rangeStart, end: rangeEnd } = getDateRange(offset);
+  const rangeLabel = `${rangeStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${rangeEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+  function doFetch(token, off) {
+    if (!token) return;
+    setMeetings(null);
+    setError(false);
+    const { start, end } = getDateRange(off);
     api.get('/dashboard/meetings', {
-      headers: { Authorization: `Bearer ${msToken}` },
+      headers: { Authorization: `Bearer ${token}` },
+      params: { startDate: start.toISOString(), endDate: end.toISOString() },
     })
       .then(({ data }) => setMeetings(data))
       .catch((err) => {
@@ -78,11 +94,50 @@ function MeetingsCard() {
         }
         setError(true);
       });
-  }, [msToken]);
+  }
+
+  // Fetch on mount (if token already exists) and whenever offset changes
+  useEffect(() => {
+    if (msToken) doFetch(msToken, offset);
+  }, [offset]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openOutlookPopup = () => {
+    const popup = window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700,left=400,top=100');
+    const handler = (e) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.ms_token) {
+        const token = e.data.ms_token;
+        localStorage.setItem('ms_access_token', token);
+        popup?.close();
+        window.removeEventListener('message', handler);
+        setMsToken(token);
+        doFetch(token, offset); // immediate fetch — don't wait for React re-render cycle
+      }
+    };
+    window.addEventListener('message', handler);
+  };
+
+  const NAV_BTN = {
+    background: 'none', border: '1px solid #D8DDE6', borderRadius: 4,
+    width: 22, height: 22, cursor: 'pointer', fontFamily: FONT,
+    fontSize: 14, color: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: 0, lineHeight: 1,
+  };
 
   return (
     <div style={CARD}>
-      <div style={CARD_HEADER}>Your Meetings</div>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.2, color: NAVY, fontFamily: FONT }}>Your Meetings</div>
+        {msToken && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <button onClick={() => canPrev && setOffset(o => o - 1)} disabled={!canPrev} style={{ ...NAV_BTN, opacity: canPrev ? 1 : 0.3, cursor: canPrev ? 'pointer' : 'default' }}>‹</button>
+            <span style={{ fontSize: 11, color: GREY, fontFamily: FONT, whiteSpace: 'nowrap', minWidth: 100, textAlign: 'center' }}>{rangeLabel}</span>
+            <button onClick={() => canNext && setOffset(o => o + 1)} disabled={!canNext} style={{ ...NAV_BTN, opacity: canNext ? 1 : 0.3, cursor: canNext ? 'pointer' : 'default' }}>›</button>
+          </div>
+        )}
+      </div>
+
       {!msToken ? (
         <button
           onClick={openOutlookPopup}
@@ -96,18 +151,23 @@ function MeetingsCard() {
       ) : meetings === null ? (
         <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>Loading...</div>
       ) : meetings.length === 0 ? (
-        <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>No Meetings Today</div>
+        <div style={{ fontSize: 13, color: GREY, fontFamily: FONT }}>No Meetings In This Period</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {meetings.map((m, i) => {
-            const time = m.start ? new Date(m.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontFamily: FONT }}>
-                <span style={{ fontWeight: 700, color: NAVY, minWidth: 50 }}>{time}</span>
-                <span style={{ color: '#333' }}>{m.title}</span>
-              </div>
-            );
-          })}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {Object.entries(groupByDate(meetings)).map(([date, dayMeetings]) => (
+            <div key={date}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: NAVY, fontFamily: FONT, marginBottom: 6, letterSpacing: 0.8, textTransform: 'uppercase' }}>{date}</div>
+              {dayMeetings.map((m, i) => {
+                const time = m.start ? new Date(m.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, fontFamily: FONT, padding: '3px 0' }}>
+                    <span style={{ fontWeight: 700, color: NAVY, minWidth: 45, flexShrink: 0 }}>{time}</span>
+                    <span style={{ color: '#333' }}>{m.title}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       )}
     </div>

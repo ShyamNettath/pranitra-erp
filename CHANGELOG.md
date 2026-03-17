@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - fix meetings loading and add week navigation
+- Description: MeetingsCard now fetches immediately on mount (if token exists) and directly on popup token receipt without waiting for React re-render. Added ‹/› navigation (1-day steps, -7 to +14 day range, 7-day window). Meetings grouped by date with date subheadings. Backend /meetings route accepts startDate/endDate query params for Graph calendarView range.
+- Lines Added: ~60
+- Lines Deleted: ~25
+- Lines Modified: 2
+- Files Changed: frontend/src/pages/DashboardPage.jsx, backend/src/routes/dashboard.js
+
 ## [2026-03-17] - fix Outlook callback HTML and page-refresh logout
 - Description: outlook.js callback now returns exact postMessage HTML targeting erp.pranitra.com with 500ms close delay. Auth tokens moved from localStorage to sessionStorage (clears on browser close, survives refresh). Added isInitializing flag to authStore so RequireAuth renders null instead of redirecting while loadMe() is in flight after a page refresh.
 - Lines Added: ~15
