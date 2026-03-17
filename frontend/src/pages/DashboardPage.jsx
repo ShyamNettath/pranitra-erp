@@ -266,15 +266,11 @@ function EmergencyContactsCard() {
 // ── My Day tab ───────────────────────────────────────────────────
 function MyDayTab() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 20 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 300 }}>
-        <MeetingsCard />
-        <EmergencyContactsCard />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 300 }}>
-        <TodoCard />
-        <NotesCard />
-      </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 20 }}>
+      <div style={{ minHeight: 280 }}><MeetingsCard /></div>
+      <div style={{ minHeight: 280 }}><TodoCard /></div>
+      <div style={{ minHeight: 280 }}><EmergencyContactsCard /></div>
+      <div style={{ minHeight: 280 }}><NotesCard /></div>
     </div>
   );
 }

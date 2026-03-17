@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - reformat existing phone numbers and restructure My Day 2x2 grid
+- Description: New migration migrate-fix-phone-format.js reformats all existing emergency_contacts phone values to +91 XXXX XXX XXX using JS formatPhone logic. My Day tab restructured as flat 4-cell grid (Meetings top-left, To-Do top-right, Emergency bottom-left, Notes bottom-right) using repeat(auto-fit, minmax(380px, 1fr)) — 2 columns on wide screens, 1 on narrow. Each cell minHeight 280px.
+- Lines Added: ~45
+- Lines Deleted: ~8
+- Lines Modified: 2
+- Files Changed: backend/src/config/migrate-fix-phone-format.js, backend/src/config/migrate-runner.js, frontend/src/pages/DashboardPage.jsx
+
 ## [2026-03-17] - add phone number formatting for emergency contacts
 - Description: Backend hr.js formats phone on POST/PUT — strips non-digits, removes leading +91/91/0, formats 10 remaining digits as +91 XXXX XXX XXX. Frontend HREmployeesPage formats on blur using same logic.
 - Lines Added: 10

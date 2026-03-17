@@ -29,6 +29,7 @@ const MIGRATIONS = [
   'migrate-emergency-contacts.js',
   'migrate-timezones.js',
   'migrate-timezones-order.js',
+  'migrate-fix-phone-format.js',
 ];
 
 async function run() {
