@@ -405,3 +405,10 @@
 - Lines Deleted: 1
 - Lines Modified: 0
 - Files Changed: frontend/src/pages/DashboardPage.jsx, CHANGELOG.md
+
+## [2026-03-17] - move openOutlookPopup inside MeetingsCard to access setMsToken
+- Description: Moved openOutlookPopup from module scope into MeetingsCard so it can call setMsToken directly. Removed the separate useEffect message listener that was duplicating the handler. Sync Outlook Tasks button now uses an inline window.open call.
+- Lines Added: 0
+- Lines Deleted: 9
+- Lines Modified: 10
+- Files Changed: frontend/src/pages/DashboardPage.jsx, CHANGELOG.md

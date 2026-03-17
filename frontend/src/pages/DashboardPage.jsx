@@ -40,34 +40,28 @@ function useQuote() {
   return quote;
 }
 
-function openOutlookPopup() {
-  const popup = window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700,left=400,top=100');
-  window.addEventListener('message', function handler(e) {
-    if (e.origin !== window.location.origin) return;
-    if (e.data?.ms_token) {
-      localStorage.setItem('ms_access_token', e.data.ms_token);
-      popup?.close();
-      window.removeEventListener('message', handler);
-    }
-  });
-}
-
 function MeetingsCard() {
   const [meetings, setMeetings] = useState(null);
   const [error, setError] = useState(false);
   const [msToken, setMsToken] = useState(() => localStorage.getItem('ms_access_token'));
 
-  // Listen for token from OAuth popup
-  useEffect(() => {
-    function handleMessage(e) {
+  const openOutlookPopup = () => {
+    const popup = window.open(
+      '/api/auth/outlook',
+      'outlook_auth',
+      'width=600,height=700,left=400,top=100'
+    );
+    const handler = (e) => {
+      if (e.origin !== window.location.origin) return;
       if (e.data?.ms_token) {
         localStorage.setItem('ms_access_token', e.data.ms_token);
+        popup?.close();
+        window.removeEventListener('message', handler);
         setMsToken(e.data.ms_token);
       }
-    }
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
+    };
+    window.addEventListener('message', handler);
+  };
 
   // Fetch meetings from backend proxy when token is available
   useEffect(() => {
@@ -179,7 +173,7 @@ function TodoCard() {
         {todos.length === 0 && <div style={{ fontSize: 13, color: GREY, fontFamily: FONT, padding: '8px 0' }}>No Tasks Yet</div>}
       </div>
       <button
-        onClick={() => { if (!localStorage.getItem('ms_access_token')) openOutlookPopup(); }}
+        onClick={() => { if (!localStorage.getItem('ms_access_token')) window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700,left=400,top=100'); }}
         title="Sync tasks from Outlook"
         style={{ marginTop: 12, padding: '6px 14px', background: '#E8ECF0', color: GREY, border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
       >
