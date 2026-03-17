@@ -82,11 +82,16 @@ function MeetingsCard() {
     setMeetings(null);
     setFetchError(false);
     const { start, end } = getDateRange(off);
+    console.log('[MeetingsCard] doFetch called, offset:', off, 'range:', start.toISOString(), '-', end.toISOString());
     api.get('/dashboard/meetings', {
       params: { startDate: start.toISOString(), endDate: end.toISOString() },
     })
-      .then(({ data }) => setMeetings(data))
+      .then(({ data }) => {
+        console.log('[MeetingsCard] meetings loaded:', data.length);
+        setMeetings(data);
+      })
       .catch((err) => {
+        console.error('[MeetingsCard] fetch error:', err.response?.status, err.response?.data || err.message);
         if (err.response?.status === 403) setMsConnected(false);
         setFetchError(true);
       });
@@ -109,13 +114,16 @@ function MeetingsCard() {
       if (e.origin !== window.location.origin) return;
       if (e.data?.ms_token) {
         const { ms_token, ms_refresh_token, ms_expires_in } = e.data;
+        console.log('MS token received, fetching meetings...');
         popup?.close();
         window.removeEventListener('message', handler);
         api.put('/users/me/ms-token', {
           ms_access_token:  ms_token,
           ms_refresh_token: ms_refresh_token || null,
           ms_expires_in:    ms_expires_in    || null,
-        }).catch(() => {}).finally(() => {
+        }).catch((err) => {
+          console.error('[MeetingsCard] failed to save MS token to DB:', err.response?.data || err.message);
+        }).finally(() => {
           setMsConnected(true);
           doFetch(offset);
         });
