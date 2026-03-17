@@ -41,7 +41,15 @@ function useQuote() {
 }
 
 function openOutlookPopup() {
-  window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700');
+  const popup = window.open('/api/auth/outlook', 'outlook_auth', 'width=600,height=700,left=400,top=100');
+  window.addEventListener('message', function handler(e) {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.ms_token) {
+      localStorage.setItem('ms_access_token', e.data.ms_token);
+      popup?.close();
+      window.removeEventListener('message', handler);
+    }
+  });
 }
 
 function MeetingsCard() {

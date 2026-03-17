@@ -398,3 +398,10 @@
 - Lines Deleted: 16
 - Lines Modified: 2
 - Files Changed: backend/src/config/migrate-dashboard.js, backend/src/config/migrate-dashboard-notes.js, CHANGELOG.md
+
+## [2026-03-17] - fix Outlook OAuth popup with origin check and popup reference close
+- Description: Added left/top position to popup dimensions, added origin check in message listener, close popup via stored reference, and remove listener after token received.
+- Lines Added: 7
+- Lines Deleted: 1
+- Lines Modified: 0
+- Files Changed: frontend/src/pages/DashboardPage.jsx, CHANGELOG.md
