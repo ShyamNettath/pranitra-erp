@@ -43,27 +43,45 @@ function useQuote() {
 function MeetingsCard() {
   const [meetings, setMeetings] = useState(null);
   const [error, setError] = useState(false);
-  const token = localStorage.getItem('ms_access_token');
+  const [msToken, setMsToken] = useState(() => localStorage.getItem('ms_access_token'));
 
+  // On mount: capture ms_token from URL if present, save to localStorage, clean URL
   useEffect(() => {
-    if (!token) return;
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
-    fetch(`https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start}&endDateTime=${end}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('ms_token');
+    if (tokenFromUrl) {
+      localStorage.setItem('ms_access_token', tokenFromUrl);
+      setMsToken(tokenFromUrl);
+      params.delete('ms_token');
+      const cleanUrl = params.toString()
+        ? `${window.location.pathname}?${params}`
+        : window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, []);
+
+  // Fetch meetings from backend proxy when token is available
+  useEffect(() => {
+    if (!msToken) return;
+    api.get('/dashboard/meetings', {
+      headers: { Authorization: `Bearer ${msToken}` },
     })
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(data => setMeetings(data.value || []))
-      .catch(() => setError(true));
-  }, [token]);
+      .then(({ data }) => setMeetings(data))
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          localStorage.removeItem('ms_access_token');
+          setMsToken(null);
+        }
+        setError(true);
+      });
+  }, [msToken]);
 
   return (
     <div style={CARD}>
       <div style={CARD_HEADER}>Your Meetings</div>
-      {!token ? (
+      {!msToken ? (
         <button
-          onClick={() => console.log('MS OAuth not yet configured')}
+          onClick={() => { window.location.href = '/api/auth/outlook'; }}
           title="Connect your Outlook calendar"
           style={{ padding: '10px 20px', background: NAVY, color: 'white', border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
@@ -78,11 +96,11 @@ function MeetingsCard() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {meetings.map((m, i) => {
-            const time = m.start?.dateTime ? new Date(m.start.dateTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+            const time = m.start ? new Date(m.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontFamily: FONT }}>
                 <span style={{ fontWeight: 700, color: NAVY, minWidth: 50 }}>{time}</span>
-                <span style={{ color: '#333' }}>{m.subject || 'Untitled'}</span>
+                <span style={{ color: '#333' }}>{m.title}</span>
               </div>
             );
           })}
@@ -148,7 +166,7 @@ function TodoCard() {
         {todos.length === 0 && <div style={{ fontSize: 13, color: GREY, fontFamily: FONT, padding: '8px 0' }}>No Tasks Yet</div>}
       </div>
       <button
-        onClick={() => console.log('Outlook Tasks sync not yet configured')}
+        onClick={() => { if (!localStorage.getItem('ms_access_token')) window.location.href = '/api/auth/outlook'; }}
         title="Sync tasks from Outlook"
         style={{ marginTop: 12, padding: '6px 14px', background: '#E8ECF0', color: GREY, border: 'none', borderRadius: 6, fontFamily: FONT, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
       >
