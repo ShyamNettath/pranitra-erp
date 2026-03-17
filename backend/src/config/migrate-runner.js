@@ -25,6 +25,7 @@ const MIGRATIONS = [
   'migrate-file-optimisation.js',
   'migrate-workspace-modules.js',
   'migrate-dashboard.js',
+  'migrate-dashboard-notes.js',
 ];
 
 async function run() {

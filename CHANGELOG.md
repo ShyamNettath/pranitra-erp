@@ -384,3 +384,10 @@
 - Lines Deleted: 12
 - Lines Modified: 3
 - Files Changed: frontend/src/pages/DashboardPage.jsx, backend/src/routes/outlook.js, CHANGELOG.md
+
+## [2026-03-17] - add migrate-dashboard-notes.js migration
+- Description: New migration file that creates the dashboard_notes table if it does not already exist. Added to migration runner list after migrate-dashboard.js.
+- Lines Added: 35
+- Lines Deleted: 0
+- Lines Modified: 1
+- Files Changed: backend/src/config/migrate-dashboard-notes.js, backend/src/config/migrate-runner.js, CHANGELOG.md
