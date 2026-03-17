@@ -207,15 +207,14 @@ function NotesCard() {
   }, []);
 
   return (
-    <div style={CARD}>
+    <div style={{ ...CARD, display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
       <div style={CARD_HEADER}>Notes</div>
       <textarea
         value={notes}
         onChange={handleChange}
         placeholder="Write your notes here..."
         title="Personal notes"
-        rows={5}
-        style={{ width: '100%', border: '1.5px solid #D8DDE6', borderRadius: 6, padding: 10, fontFamily: FONT, fontSize: 13, color: NAVY, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+        style={{ flex: 1, minHeight: 200, width: '100%', border: '1.5px solid #D8DDE6', borderRadius: 6, padding: 10, fontFamily: FONT, fontSize: 13, color: NAVY, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
       />
       {saved && <div style={{ fontSize: 11, color: GREY, marginTop: 4, fontFamily: FONT }}>Saved</div>}
     </div>

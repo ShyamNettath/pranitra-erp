@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - force reformat phone numbers via raw SQL and expand Notes textarea
+- Description: New migration migrate-fix-phone-format-v2.js runs a raw PostgreSQL UPDATE using substring/regexp_replace to reformat all rows not already matching '+91 % % %'. NotesCard outer div made flex-column so textarea can use flex:1 and minHeight:200px to fill its grid cell.
+- Lines Added: ~35
+- Lines Deleted: 0
+- Lines Modified: 3
+- Files Changed: backend/src/config/migrate-fix-phone-format-v2.js, backend/src/config/migrate-runner.js, frontend/src/pages/DashboardPage.jsx
+
 ## [2026-03-17] - reformat existing phone numbers and restructure My Day 2x2 grid
 - Description: New migration migrate-fix-phone-format.js reformats all existing emergency_contacts phone values to +91 XXXX XXX XXX using JS formatPhone logic. My Day tab restructured as flat 4-cell grid (Meetings top-left, To-Do top-right, Emergency bottom-left, Notes bottom-right) using repeat(auto-fit, minmax(380px, 1fr)) — 2 columns on wide screens, 1 on narrow. Each cell minHeight 280px.
 - Lines Added: ~45
