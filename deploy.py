@@ -252,6 +252,7 @@ class DeployApp(tk.Tk):
             repo = self.cfg.get("server_repo_path", "/var/www/usaha-erp")
             deploy_cmd = (
                 f"cd {repo} 2>&1 && "
+                f"git checkout -- . 2>&1 && "
                 f"git pull origin main 2>&1 && "
                 f"docker compose up --build -d 2>&1 && "
                 f"sleep 12 && "

@@ -419,3 +419,10 @@
 - Lines Deleted: 10
 - Lines Modified: 0
 - Files Changed: docker-compose.yml, CHANGELOG.md
+
+## [2026-03-17] - discard server local changes before git pull in deploy tool
+- Description: Added git checkout -- . before git pull in the SSH deploy command so any local server modifications are discarded before pulling, preventing deploy conflicts permanently.
+- Lines Added: 1
+- Lines Deleted: 0
+- Lines Modified: 0
+- Files Changed: deploy.py, CHANGELOG.md
