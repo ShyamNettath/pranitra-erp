@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - fix timezone bar always visible across all pages
+- Description: Nav items div in AppShell sidebar was missing minHeight:0 and overflowY:auto, causing it to grow past its flex-allocated space on pages with taller nav lists and pushing the timezone bar off-screen (clipped by overflow:hidden on the aside). Adding those two properties ensures the nav area scrolls internally and the timezone bar is always pinned at the bottom of the sidebar.
+- Lines Added: 0
+- Lines Deleted: 0
+- Lines Modified: 1
+- Files Changed: frontend/src/components/layout/AppShell.jsx
+
 ## [2026-03-17] - fix timezone bar layout and order
 - Description: Timezone bar changed from horizontal to vertical stacked (label left, time right, full sidebar width, 13px time / 11px label). Short codes DE/UK/IN. Hidden when sidebar collapsed. New migrate-timezones-order.js sets DE=1, UK=2, IN=3. migrate-timezones.js seed updated to match.
 - Lines Added: ~30

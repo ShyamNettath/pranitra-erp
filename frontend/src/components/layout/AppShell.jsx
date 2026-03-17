@@ -222,7 +222,7 @@ export default function AppShell() {
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden', transition: 'width 0.2s',
         }}>
-          <div style={{ padding: '16px 12px', flex: 1 }}>
+          <div style={{ padding: '16px 12px', flex: 1, overflowY: 'auto', minHeight: 0 }}>
             {NAV.map(({ to, label, icon, key }) => {
               const isProjectsParent = key === 'projects' && isEngineering;
               const projectSubItems = [
