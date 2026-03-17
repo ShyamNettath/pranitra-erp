@@ -343,3 +343,10 @@
 - Lines Modified: 0
 - Files Changed: CHANGELOG.md
 
+## [2026-03-17] - add backend/.env.example with all environment variables
+- Description: Created backend/.env.example listing every environment variable the app uses, with empty or placeholder values for developer onboarding. Also removed the old root-level .env.example.
+- Lines Added: 43
+- Lines Deleted: 37
+- Lines Modified: 0
+- Files Changed: backend/.env.example, .env.example, CHANGELOG.md
+
