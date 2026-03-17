@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - add phone number formatting for emergency contacts
+- Description: Backend hr.js formats phone on POST/PUT — strips non-digits, removes leading +91/91/0, formats 10 remaining digits as +91 XXXX XXX XXX. Frontend HREmployeesPage formats on blur using same logic.
+- Lines Added: 10
+- Lines Deleted: 0
+- Lines Modified: 2
+- Files Changed: backend/src/routes/hr.js, frontend/src/pages/HREmployeesPage.jsx
+
 ## [2026-03-17] - fix Emergency Contacts table layout and responsive grid
 - Description: Replaced Emergency Contacts card grid with a clean table (Name/Role/Phone columns, navy header, subtle row borders). MyDayTab grid changed to repeat(auto-fit, minmax(400px, 1fr)) so it is 2-column on wide screens and drops to 1 column on narrow screens. Each column container has minHeight: 300px.
 - Lines Added: 0

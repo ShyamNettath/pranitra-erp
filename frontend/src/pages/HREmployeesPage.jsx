@@ -392,6 +392,15 @@ const NAVY = '#003264';
 
 const EMPTY_FORM = { name: '', role: '', phone: '', display_order: 0, is_active: true, contact_type: 'external', user_id: '' };
 
+function formatPhone(raw) {
+  if (!raw) return raw;
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0'))  digits = digits.slice(1);
+  if (digits.length !== 10) return raw;
+  return `+91 ${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 10)}`;
+}
+
 function EmergencyContactsPanel() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -565,7 +574,7 @@ function EmergencyContactsPanel() {
             {/* Phone */}
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Phone</label>
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} style={inputStyle} placeholder="+91 XXXXX XXXXX" />
+              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} onBlur={e => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} style={inputStyle} placeholder="+91 XXXX XXX XXX" />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>

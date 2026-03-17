@@ -2,6 +2,15 @@ const router = require('express').Router();
 const { authenticate, requireRole } = require('../middleware/auth');
 const db = require('../config/db');
 
+function formatPhone(raw) {
+  if (!raw) return raw;
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0'))  digits = digits.slice(1);
+  if (digits.length !== 10) return raw;
+  return `+91 ${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 10)}`;
+}
+
 // GET /api/hr/emergency-contacts — all authenticated users
 router.get('/emergency-contacts', authenticate, async (_req, res, next) => {
   try {
@@ -36,7 +45,7 @@ router.post('/emergency-contacts', authenticate, requireRole('admin', 'super_use
       .insert({
         name,
         role,
-        phone,
+        phone: formatPhone(phone),
         display_order: display_order || 0,
         is_active: is_active !== false,
         contact_type: contact_type || 'external',
@@ -53,7 +62,7 @@ router.put('/emergency-contacts/:id', authenticate, requireRole('admin', 'super_
     const { name, role, phone, display_order, is_active, contact_type, user_id } = req.body;
     const [updated] = await db('emergency_contacts')
       .where({ id: req.params.id })
-      .update({ name, role, phone, display_order, is_active, contact_type, user_id: user_id || null })
+      .update({ name, role, phone: formatPhone(phone), display_order, is_active, contact_type, user_id: user_id || null })
       .returning('*');
     if (!updated) return res.status(404).json({ error: 'Contact not found' });
     res.json(updated);
