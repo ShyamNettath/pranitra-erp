@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2026-03-17] - fix timezone bar layout and order
+- Description: Timezone bar changed from horizontal to vertical stacked (label left, time right, full sidebar width, 13px time / 11px label). Short codes DE/UK/IN. Hidden when sidebar collapsed. New migrate-timezones-order.js sets DE=1, UK=2, IN=3. migrate-timezones.js seed updated to match.
+- Lines Added: ~30
+- Lines Deleted: ~15
+- Lines Modified: 3
+- Files Changed: frontend/src/components/layout/AppShell.jsx, backend/src/config/migrate-timezones.js, backend/src/config/migrate-timezones-order.js, backend/src/config/migrate-runner.js
+
 ## [2026-03-17] - build Dashboard My Day tab, Emergency Contacts, and sidebar timezone bar
 - Description: Rebuilt DashboardPage with persistent header (greeting + quote), 4-tab bar (My Day active, others Coming Soon), and My Day content: 2-column Meetings/Todo+Notes layout plus full-width Emergency Contacts card. Added Emergency Contacts CRUD to HREmployeesPage (new tab, internal/external contact types, HR/Admin only write). Added real-time timezone bar at bottom of sidebar in AppShell. Backend: hr.js routes, migrate-emergency-contacts.js, migrate-timezones.js, GET /api/settings/timezones.
 - Lines Added: ~580

@@ -329,20 +329,20 @@ export default function AppShell() {
 
           {/* Timezone bar */}
           {sidebarOpen && timezones.length > 0 && (
-            <div style={{
-              background: '#1A1A2E', height: 40, flexShrink: 0,
-              display: 'flex', alignItems: 'center', padding: '0 12px',
-              gap: 0, overflow: 'hidden',
-            }}>
-              {timezones.map((tz, i) => (
-                <React.Fragment key={tz.id}>
-                  {i > 0 && <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 8px', fontSize: 11 }}>|</span>}
-                  <span style={{ fontSize: 11, color: 'white', fontFamily: 'Arial, sans-serif', whiteSpace: 'nowrap' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{tz.label}</span>
-                    {' '}
-                    <span style={{ fontWeight: 700 }}>{tzTimes[tz.id] || '—'}</span>
+            <div style={{ background: '#1A1A2E', flexShrink: 0, padding: '4px 16px' }}>
+              {timezones.map(tz => (
+                <div key={tz.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontFamily: 'Arial, sans-serif', fontWeight: 600, letterSpacing: 0.5 }}>
+                    {tz.label}
                   </span>
-                </React.Fragment>
+                  <span style={{ fontSize: 13, color: 'white', fontFamily: 'Arial, sans-serif', fontWeight: 700 }}>
+                    {tzTimes[tz.id] || '—'}
+                  </span>
+                </div>
               ))}
             </div>
           )}

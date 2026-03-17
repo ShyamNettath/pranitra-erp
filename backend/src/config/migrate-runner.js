@@ -28,6 +28,7 @@ const MIGRATIONS = [
   'migrate-dashboard-notes.js',
   'migrate-emergency-contacts.js',
   'migrate-timezones.js',
+  'migrate-timezones-order.js',
 ];
 
 async function run() {

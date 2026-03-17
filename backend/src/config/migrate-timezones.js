@@ -20,9 +20,9 @@ async function migrate() {
       t.boolean('is_active').defaultTo(true);
     });
     await db('timezones').insert([
-      { label: 'India', timezone: 'Asia/Kolkata', display_order: 1 },
+      { label: 'DE', timezone: 'Europe/Berlin', display_order: 1 },
       { label: 'UK', timezone: 'Europe/London', display_order: 2 },
-      { label: 'Germany', timezone: 'Europe/Berlin', display_order: 3 },
+      { label: 'IN', timezone: 'Asia/Kolkata', display_order: 3 },
     ]);
     logger.info('Created timezones table with default entries.');
   } else {
