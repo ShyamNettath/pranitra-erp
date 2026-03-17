@@ -420,6 +420,13 @@
 - Lines Modified: 0
 - Files Changed: docker-compose.yml, CHANGELOG.md
 
+## [2026-03-17] - add debug logging and env var validation to outlook OAuth handler
+- Description: Added console.log for MS_CLIENT_ID, MS_TENANT_ID, MS_REDIRECT_URI at the start of the GET /api/auth/outlook handler. Added missing-var check that returns a plain text error instead of redirecting when any var is unset. Wrapped handler in try/catch with error logging.
+- Lines Added: 20
+- Lines Deleted: 6
+- Lines Modified: 0
+- Files Changed: backend/src/routes/outlook.js, CHANGELOG.md
+
 ## [2026-03-17] - discard server local changes before git pull in deploy tool
 - Description: Added git checkout -- . before git pull in the SSH deploy command so any local server modifications are discarded before pulling, preventing deploy conflicts permanently.
 - Lines Added: 1

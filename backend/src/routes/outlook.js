@@ -2,16 +2,38 @@ const router = require('express').Router();
 
 // GET /api/auth/outlook — redirect to Microsoft OAuth
 router.get('/', (_req, res) => {
-  const params = new URLSearchParams({
-    client_id: process.env.MS_CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: process.env.MS_REDIRECT_URI,
-    scope: 'Calendars.Read Tasks.Read offline_access openid profile',
-    response_mode: 'query',
-  });
+  try {
+    const clientId   = process.env.MS_CLIENT_ID;
+    const tenantId   = process.env.MS_TENANT_ID;
+    const redirectUri = process.env.MS_REDIRECT_URI;
 
-  const url = `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/authorize?${params}`;
-  res.redirect(url);
+    console.log('[outlook] MS_CLIENT_ID:   ', clientId);
+    console.log('[outlook] MS_TENANT_ID:   ', tenantId);
+    console.log('[outlook] MS_REDIRECT_URI:', redirectUri);
+
+    const missing = [];
+    if (!clientId)    missing.push('MS_CLIENT_ID');
+    if (!tenantId)    missing.push('MS_TENANT_ID');
+    if (!redirectUri) missing.push('MS_REDIRECT_URI');
+
+    if (missing.length > 0) {
+      return res.status(500).type('text').send(`Outlook OAuth misconfigured — missing env vars: ${missing.join(', ')}`);
+    }
+
+    const params = new URLSearchParams({
+      client_id:     clientId,
+      response_type: 'code',
+      redirect_uri:  redirectUri,
+      scope:         'Calendars.Read Tasks.Read offline_access openid profile',
+      response_mode: 'query',
+    });
+
+    const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params}`;
+    res.redirect(url);
+  } catch (err) {
+    console.error('[outlook] Error in GET /api/auth/outlook:', err);
+    res.status(500).type('text').send('Outlook OAuth error — check server logs');
+  }
 });
 
 // GET /api/auth/outlook/callback — exchange code for tokens
